@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moderno · kit de tema</title>
+<link rel="stylesheet" href="nova-moderno.css">
+<style>
+/* ---- só do kit: amostras e código ---- */
+.kit-swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; margin-top: 28px; text-align: left; }
+.kit-swatch { border-radius: 20px; background: var(--card-a); padding: 14px; }
+.nova-m-band--alt .kit-swatch { background: var(--card-b); }
+.kit-swatch i { display: block; height: 46px; border-radius: 12px; background: var(--sw); }
+.kit-swatch strong { display: block; margin-top: 10px; font-size: 12.5px; }
+.kit-swatch small { display: block; margin-top: 2px; font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--text2); }
+.kit-tipos { display: flex; flex-direction: column; gap: 18px; margin-top: 28px; text-align: left; }
+.kit-tipos > div { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px solid var(--hair); }
+.kit-tipos code, .kit-code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; font-weight: 400; color: var(--text2); }
+.kit-tipos code { flex: 0 0 200px; }
+@media (max-width: 860px) { .kit-tipos code { flex: 1 1 100%; } }
+</style>
+</head>
+<body>
+
+<div class="nova-m-shell">
+  <header class="nova-m-topbar">
+    <button type="button" class="nova-m-topbar__brand nova-m-wordmark">NOVA</button>
+    <span class="nova-m-topbar__rule" aria-hidden="true"></span>
+    <nav class="nova-m-dock">
+      <a href="#tokens" class="nova-m-dock__item">TOKENS</a>
+      <a href="#tipografia" class="nova-m-dock__item">TIPOGRAFIA</a>
+      <a href="#controles" class="nova-m-dock__item">CONTROLES</a>
+      <a href="#efeitos" class="nova-m-dock__item" data-active>EFEITOS</a>
+      <a href="#relatorio" class="nova-m-dock__item">RELATÓRIO</a>
+    </nav>
+    <div class="nova-m-topbar__actions">
+      <button type="button" class="nova-m-icon-btn" id="themeBtn" title="Mudar para o modo escuro" aria-label="Mudar para o modo escuro">
+        <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3"></circle><path d="M8 1.6a6.4 6.4 0 0 1 0 12.8Z" fill="currentColor"></path></svg>
+      </button>
+      <a href="#" class="nova-m-avatar" title="Perfil">AB</a>
+      <button type="button" class="nova-m-exit" title="Sair" aria-label="Sair"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M13 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M16 8l4 4-4 4M20 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="nova-m-band nova-m-band--tight">
+      <div class="nova-m-wrap nova-m-center">
+        <div class="nova-m-mark ">
+        <img src="nova-symbol.png" alt="" class="nova-m-mark__symbol nova-m-breathe">
+        <div class="nova-m-mark__text">
+          <p class="nova-m-mark__word nova-m-wave--brand">NOVA</p>
+          <p class="nova-m-mark__signature">NÚCLEO OPERACIONAL <span>A</span> CREDIT</p>
+        </div>
+        </div>
+        <h1 class="nova-m-h1" style="margin-top:26px">Moderno.</h1>
+        <p class="nova-m-lead">O tema em um arquivo: tokens de claro e escuro, tipografia, controles, superfícies, os efeitos da marca e as receitas de relatório. Use o botão de aparência no topo para ver as duas versões.</p>
+        <div class="nova-m-acoes">
+          <button type="button" class="nova-m-btn" id="verLoader">Ver tela de carregamento</button>
+          <button type="button" class="nova-m-btn nova-m-btn--ghost" id="verModal">Ver janela</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="nova-m-band nova-m-band--alt" id="tokens">
+      <div class="nova-m-wrap nova-m-center">
+        <span class="nova-m-module__mark" style="--accent-color:var(--a-blu)"></span>
+        <h2 class="nova-m-h2">Tokens.</h2>
+        <p class="nova-m-lead">Tudo sai de variáveis CSS no <code class="kit-code">&lt;html&gt;</code>. O tema escuro é o mesmo conjunto de nomes com outros valores — nenhum componente sabe qual tema está ativo.</p>
+        <div class="kit-swatches" id="swatches"></div>
+        <p class="nova-m-notice">Regra de cor: acentos <code class="kit-code">--a-*</code> para categorias · <b>negativo/reprovado sempre <code class="kit-code">--red</code></b> · positivo/aprovado <code class="kit-code">--a-blu</code> · um acento por cartão, nunca gradiente de fundo.</p>
+      </div>
+    </section>
+
+    <section class="nova-m-band" id="tipografia">
+      <div class="nova-m-wrap nova-m-center">
+        <h2 class="nova-m-h2">Tipografia.</h2>
+        <p class="nova-m-lead">Google Sans é a fonte de produção e não é distribuível: a folha cai para <b>DM Sans</b>, que tem o mesmo desenho geométrico. Peso 700 é o padrão do corpo; apoio cai para 400.</p>
+        <div class="kit-tipos">
+          <div><code>.nova-m-h1 · 62/64 · -1.5px</code><span class="nova-m-h1">Título grande.</span></div>
+          <div><code>.nova-m-h2 · 34/38 · -0.6px</code><span class="nova-m-h2">Título de seção.</span></div>
+          <div><code>.nova-m-h3 · 28/34 · -0.3px</code><span class="nova-m-h3">Título de janela</span></div>
+          <div><code>.nova-m-lead · 17/24 · 400</code><span class="nova-m-lead" style="margin:0">Texto de apoio da seção, um pouco maior que o corpo.</span></div>
+          <div><code>.nova-m-support · 14/20 · 400</code><span class="nova-m-support">Observação secundária, notas de rodapé e legendas.</span></div>
+          <div><code>.nova-m-eyebrow · 12 · 0.22em</code><span class="nova-m-eyebrow">Rótulo de seção</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="nova-m-band nova-m-band--alt" id="controles">
+      <div class="nova-m-wrap nova-m-center">
+        <h2 class="nova-m-h2">Controles e superfícies.</h2>
+        <p class="nova-m-lead">Botão primário de 52px e raio 980px; fantasma de 44px; pílula de filtro que inverte quando ativa; campo de 52px e raio 14px. Cartão de raio 28px com acento de 4px.</p>
+        <div class="nova-m-acoes">
+          <button type="button" class="nova-m-btn">Ação principal</button>
+          <button type="button" class="nova-m-btn nova-m-btn--red">Ação destrutiva</button>
+          <button type="button" class="nova-m-btn nova-m-btn--ghost">Ação secundária</button>
+          <button type="button" class="nova-m-pill" data-active>Todos</button>
+          <button type="button" class="nova-m-pill">Filtro</button>
+          <button type="button" class="nova-m-mini">Editar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:28px;text-align:left">
+          <label><span class="nova-m-label">Nome</span><input class="nova-m-field" placeholder="Texto de exemplo"></label>
+          <label><span class="nova-m-label">Data</span><input class="nova-m-field" type="date" value="2026-01-15"></label>
+          <label><span class="nova-m-label">Status</span><select class="nova-m-field"><option>Aprovado</option><option>Reprovado</option></select></label>
+        </div>
+        <div class="nova-m-grid">
+          <article class="nova-m-card nova-m-rise" style="--i:0"><span class="nova-m-accent" style="--accent-color:var(--a-org)"></span><p class="nova-m-card__label">Total</p><p class="nova-m-card__valor">120</p><p class="nova-m-card__sub">registros</p></article>
+          <article class="nova-m-card nova-m-rise" style="--i:1"><span class="nova-m-accent" style="--accent-color:var(--a-blu)"></span><p class="nova-m-card__label">Positivos</p><p class="nova-m-card__valor">42</p><p class="nova-m-card__sub">35% do total</p></article>
+          <article class="nova-m-card nova-m-rise" style="--i:2"><span class="nova-m-accent" style="--accent-color:var(--red)"></span><p class="nova-m-card__label">Negativos</p><p class="nova-m-card__valor">78</p><p class="nova-m-card__sub">65% do total</p></article>
+          <article class="nova-m-card nova-m-rise" style="--i:3"><span class="nova-m-accent" style="--accent-color:var(--a-grn)"></span><p class="nova-m-card__label">Taxa</p><p class="nova-m-card__valor">35%</p><p class="nova-m-card__sub">média do período</p></article>
+        </div>
+        <ul class="nova-m-rows" style="max-width:760px;margin-left:auto;margin-right:auto">
+          <li><span class="nova-m-dot" style="--accent-color:var(--a-blu)"></span><span class="nova-m-rows__label">Item de exemplo A</span><b>68</b><small>35,3%</small></li>
+          <li><span class="nova-m-dot" style="--accent-color:var(--a-cyn)"></span><span class="nova-m-rows__label">Item de exemplo B</span><b>59</b><small>28,8%</small></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="nova-m-band" id="efeitos">
+      <div class="nova-m-wrap nova-m-center">
+        <h2 class="nova-m-h2">Efeitos.</h2>
+        <p class="nova-m-lead">Quatro, e nada além deles. Todos respeitam <code class="kit-code">prefers-reduced-motion</code>.</p>
+        <div class="nova-m-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+          <article class="nova-m-card">
+            <p class="nova-m-card__label">Onda da marca</p>
+            <p class="nova-m-support" style="margin-top:8px">Gradiente azul→magenta atravessando o texto e voltando à cor do tema. 6s, linear, infinito.</p>
+            <p class="nova-m-mark__word nova-m-wave--brand" style="margin-top:18px;font-size:44px;line-height:46px">NOVA</p>
+            <p class="kit-code" style="margin:14px 0 0">.nova-m-wave--brand</p>
+          </article>
+          <article class="nova-m-card">
+            <p class="nova-m-card__label">Respiração</p>
+            <p class="nova-m-support" style="margin-top:8px">O símbolo sobe 4px e cresce 1,5% em 7s. Só na marca.</p>
+            <img src="nova-symbol.png" alt="" class="nova-m-breathe" style="width:96px;height:auto;margin-top:14px">
+            <p class="kit-code" style="margin:14px 0 0">.nova-m-breathe</p>
+          </article>
+          <article class="nova-m-card">
+            <p class="nova-m-card__label">Entrada em cascata</p>
+            <p class="nova-m-support" style="margin-top:8px">Sobe 16px com atraso de 90ms por item (<code class="kit-code">--i</code>). Nunca condiciona a visibilidade.</p>
+            <div style="display:flex;gap:6px;justify-content:center;margin-top:18px">
+              <span class="nova-m-rise" style="--i:0;width:26px;height:26px;border-radius:9px;background:var(--a-blu)"></span>
+              <span class="nova-m-rise" style="--i:1;width:26px;height:26px;border-radius:9px;background:var(--a-cyn)"></span>
+              <span class="nova-m-rise" style="--i:2;width:26px;height:26px;border-radius:9px;background:var(--a-grn)"></span>
+              <span class="nova-m-rise" style="--i:3;width:26px;height:26px;border-radius:9px;background:var(--a-amb)"></span>
+            </div>
+            <p class="kit-code" style="margin:14px 0 0">.nova-m-rise</p>
+          </article>
+          <article class="nova-m-card">
+            <p class="nova-m-card__label">Troca de tema</p>
+            <p class="nova-m-support" style="margin-top:8px">1s de transição em cor, fundo e borda — ligada só durante a troca, via <code class="kit-code">data-theme-anim</code>.</p>
+            <div class="nova-m-acoes" style="margin-top:18px"><button type="button" class="nova-m-btn nova-m-btn--ghost" id="verTema">Alternar agora</button></div>
+            <p class="kit-code" style="margin:14px 0 0">html[data-theme-anim]</p>
+          </article>
+        </div>
+        <p class="nova-m-notice">A faixa arco-íris (<code class="kit-code">.nova-m-signature</code>) fecha a página; o acento do módulo (<code class="kit-code">.nova-m-module__mark</code>) abre o topo. Nunca as duas coisas no meio do conteúdo.</p>
+      </div>
+    </section>
+
+    <section class="nova-m-band nova-m-band--alt" id="relatorio">
+      <div class="nova-m-wrap nova-m-center">
+        <h2 class="nova-m-h2">Relatório isolado.</h2>
+        <p class="nova-m-lead">Gráficos sem biblioteca: barras são divs com altura calculada, a linha é um SVG com <code class="kit-code">viewBox</code>. Ranking com trilha e tabela fecham a leitura. Dados abaixo são apenas exemplo.</p>
+        <div class="nova-r-blocos">
+          <div class="nova-r-bloco">
+            <p class="nova-r-bloco__titulo">Positivo x negativo</p>
+            <p class="nova-r-bloco__lead">Altura da barra = total do período · escala declarada na legenda</p>
+            <div class="nova-r-legenda">
+              <span><i style="background:var(--a-blu)"></i>Positivo</span>
+              <span><i style="background:var(--red)"></i>Negativo</span>
+            </div>
+            <div class="nova-r-barras">
+              <div class="nova-r-bar"><div class="nova-r-bar__col" style="height:150px"><span class="nova-r-bar__total">33</span><i class="nova-r-bar__neg" style="height:79px"></i><i class="nova-r-bar__pos" style="height:45px"></i></div><span class="nova-r-bar__eixo">P1</span></div>
+              <div class="nova-r-bar"><div class="nova-r-bar__col" style="height:150px"><span class="nova-r-bar__total">35</span><i class="nova-r-bar__neg" style="height:83px"></i><i class="nova-r-bar__pos" style="height:49px"></i></div><span class="nova-r-bar__eixo">P2</span></div>
+              <div class="nova-r-bar"><div class="nova-r-bar__col" style="height:150px"><span class="nova-r-bar__total">28</span><i class="nova-r-bar__neg" style="height:75px"></i><i class="nova-r-bar__pos" style="height:30px"></i></div><span class="nova-r-bar__eixo">P3</span></div>
+              <div class="nova-r-bar"><div class="nova-r-bar__col" style="height:150px"><span class="nova-r-bar__total">18</span><i class="nova-r-bar__neg" style="height:45px"></i><i class="nova-r-bar__pos" style="height:23px"></i></div><span class="nova-r-bar__eixo">P4</span></div>
+            </div>
+          </div>
+          <div class="nova-r-bloco">
+            <p class="nova-r-bloco__titulo">Taxa ao longo do período</p>
+            <p class="nova-r-bloco__lead">Escala 0–40% · o gráfico ocupa a altura livre do bloco</p>
+            <svg class="nova-r-line" viewBox="0 0 620 330" role="img" aria-label="Taxa por período">
+              <line x1="92" x2="608" y1="268" y2="268" stroke="var(--hair)" stroke-width="1.5"></line><text x="78" y="277" text-anchor="end" class="nova-r-line__eixo" style="font-size:26px">0%</text>
+              <line x1="92" x2="608" y1="209.5" y2="209.5" stroke="var(--hair)" stroke-width="1.5"></line><text x="78" y="218.5" text-anchor="end" class="nova-r-line__eixo" style="font-size:26px">10%</text>
+              <line x1="92" x2="608" y1="151" y2="151" stroke="var(--hair)" stroke-width="1.5"></line><text x="78" y="160" text-anchor="end" class="nova-r-line__eixo" style="font-size:26px">20%</text>
+              <line x1="92" x2="608" y1="92.5" y2="92.5" stroke="var(--hair)" stroke-width="1.5"></line><text x="78" y="101.5" text-anchor="end" class="nova-r-line__eixo" style="font-size:26px">30%</text>
+              <line x1="92" x2="608" y1="34" y2="34" stroke="var(--hair)" stroke-width="1.5"></line><text x="78" y="43" text-anchor="end" class="nova-r-line__eixo" style="font-size:26px">40%</text>
+              <polyline points="84,55 254,100 424,165 596,72" fill="none" stroke="var(--a-blu)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>
+              <circle cx="84" cy="55" r="6.5" fill="var(--card-b)" stroke="var(--a-blu)" stroke-width="3"></circle>
+              <circle cx="254" cy="100" r="6.5" fill="var(--card-b)" stroke="var(--a-blu)" stroke-width="3"></circle>
+              <circle cx="424" cy="165" r="6.5" fill="var(--card-b)" stroke="var(--a-blu)" stroke-width="3"></circle>
+              <circle cx="596" cy="72" r="6.5" fill="var(--card-b)" stroke="var(--a-blu)" stroke-width="3"></circle>
+              <text x="84" y="37" text-anchor="start" class="nova-r-line__valor" style="font-size:30px">36,4%</text>
+              <text x="254" y="82" text-anchor="middle" class="nova-r-line__valor" style="font-size:30px">28,6%</text>
+              <text x="424" y="147" text-anchor="middle" class="nova-r-line__valor" style="font-size:30px">17,6%</text>
+              <text x="604" y="54" text-anchor="end" class="nova-r-line__valor" style="font-size:30px">34,6%</text>
+              <text x="70" y="312" text-anchor="start" class="nova-r-line__eixo" style="font-size:26px">P1</text>
+              <text x="254" y="312" text-anchor="middle" class="nova-r-line__eixo" style="font-size:26px">P2</text>
+              <text x="424" y="312" text-anchor="middle" class="nova-r-line__eixo" style="font-size:26px">P3</text>
+              <text x="612" y="312" text-anchor="end" class="nova-r-line__eixo" style="font-size:26px">P4</text>
+            </svg>
+          </div>
+        </div>
+        <ul class="nova-r-rank" style="max-width:820px;margin-left:auto;margin-right:auto">
+          <li><span class="nova-r-rank__nome">Item de exemplo A</span><span class="nova-r-rank__trilha"><i style="width:100%"></i></span><span class="nova-r-rank__num"><b>68</b><small>35,3%</small></span></li>
+          <li><span class="nova-r-rank__nome">Item de exemplo B</span><span class="nova-r-rank__trilha"><i style="width:86.8%"></i></span><span class="nova-r-rank__num"><b>59</b><small>28,8%</small></span></li>
+          <li><span class="nova-r-rank__nome">Item de exemplo C</span><span class="nova-r-rank__trilha"><i style="width:41.2%"></i></span><span class="nova-r-rank__num"><b>28</b><small>32,1%</small></span></li>
+        </ul>
+        <div class="nova-r-tabelas" style="max-width:820px;margin-left:auto;margin-right:auto">
+          <div class="nova-r-tabela">
+            <p class="nova-r-bloco__titulo">Por período</p>
+            <table>
+              <thead><tr><th>Período</th><th>Positivo</th><th>Negativo</th><th>Total</th><th>Taxa</th></tr></thead>
+              <tbody>
+                <tr><td>P1</td><td>12</td><td>21</td><td>33</td><td>36,4%</td></tr>
+                <tr><td>P2</td><td>13</td><td>22</td><td>35</td><td>37,1%</td></tr>
+              </tbody>
+              <tfoot><tr><td>Total geral</td><td>56</td><td>119</td><td>175</td><td>32,0%</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+        <p class="nova-m-notice">Para celular, o mesmo conteúdo entra num card de 1080×1920 (<code class="kit-code">.nova-r-shot</code>) e sai como PNG — um arquivo por tema. O conteúdo tem que fechar <b>exatamente 1920px</b>: meça <code class="kit-code">.nova-r-shot.scrollHeight</code> e ajuste paddings; o que não cabe sai, nunca encolha a tipografia.</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="nova-m-signature" aria-hidden="true"></div>
+</div>
+
+<div class="nova-m-modal" id="modal" hidden>
+  <section class="nova-m-modal__panel" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+    <h2 class="nova-m-h3" id="modalTitulo">Janela do Moderno</h2>
+    <p class="nova-m-support" style="margin-top:8px">Raio 28px, fundo <code class="kit-code">--card-b</code>, conteúdo centralizado e scrim de <code class="kit-code">--scrim</code> atrás. No sistema, as telas filhas abrem <b>dentro</b> desta janela, como blocos que expandem.</p>
+    <button type="button" class="nova-m-btn" id="modalClose">Fechar</button>
+  </section>
+</div>
+
+<div class="nova-m-loading" id="loading" hidden role="status" aria-live="polite" aria-label="Carregando">
+  <div class="nova-m-loader">
+    <div class="nova-m-loader__rings" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="nova-m-loader__core">
+      <div class="nova-m-mark nova-m-mark--loader">
+        <img src="nova-symbol.png" alt="" class="nova-m-mark__symbol nova-m-breathe">
+        <div class="nova-m-mark__text">
+          <p class="nova-m-mark__word nova-m-wave--brand">NOVA</p>
+          <p class="nova-m-mark__signature">NÚCLEO OPERACIONAL <span>A</span> CREDIT</p>
+        </div>
+      </div>
+      <div class="nova-m-loader__bar" aria-hidden="true"><span></span></div>
+      <p class="nova-m-loader__label">Preparando sua experiência</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const html = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  const KEY = 'nova-moderno-kit-theme';
+  function rotulo() {
+    const escuro = html.dataset.theme === 'dark';
+    btn.title = escuro ? 'Mudar para o modo claro' : 'Mudar para o modo escuro';
+    btn.setAttribute('aria-label', btn.title);
+  }
+  function alternar() {
+    html.setAttribute('data-theme-anim', '');
+    if (html.dataset.theme === 'dark') { delete html.dataset.theme; } else { html.dataset.theme = 'dark'; }
+    try { localStorage.setItem(KEY, html.dataset.theme === 'dark' ? 'dark' : 'light'); } catch (e) {}
+    rotulo();
+    setTimeout(function () { html.removeAttribute('data-theme-anim'); }, 1050);
+  }
+  try { if (localStorage.getItem(KEY) === 'dark') html.dataset.theme = 'dark'; } catch (e) {}
+  rotulo();
+  btn.addEventListener('click', alternar);
+  document.getElementById('verTema').addEventListener('click', alternar);
+
+  const modal = document.getElementById('modal');
+  document.getElementById('verModal').addEventListener('click', () => { modal.hidden = false; });
+  document.getElementById('modalClose').addEventListener('click', () => { modal.hidden = true; });
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.hidden = true; });
+
+  const loading = document.getElementById('loading');
+  document.getElementById('verLoader').addEventListener('click', () => {
+    loading.hidden = false;
+    setTimeout(() => { loading.hidden = true; }, 3000);
+  });
+
+  const tokens = [
+    ['--a-blu', 'Azul'], ['--a-cyn', 'Ciano'], ['--a-grn', 'Verde'], ['--a-amb', 'Âmbar'],
+    ['--a-org', 'Laranja'], ['--a-mag', 'Magenta'], ['--a-pur', 'Púrpura'],
+    ['--blue', 'Ação'], ['--red', 'Marca / negativo'],
+    ['--bg', 'Fundo'], ['--bg2', 'Fundo alt'], ['--card-a', 'Cartão A'], ['--card-b', 'Cartão B'],
+    ['--hair', 'Fio'], ['--text', 'Texto'], ['--text2', 'Texto 2'], ['--text3', 'Texto 3']
+  ];
+  const box = document.getElementById('swatches');
+  function pintar() {
+    const cs = getComputedStyle(html);
+    box.innerHTML = tokens.map(([v, nome]) =>
+      '<div class="kit-swatch"><i style="--sw:var(' + v + ')"></i><strong>' + nome +
+      '</strong><small>' + v + ' · ' + cs.getPropertyValue(v).trim() + '</small></div>').join('');
+  }
+  pintar();
+  new MutationObserver(pintar).observe(html, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
+</body>
+</html>

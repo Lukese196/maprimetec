@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1080">
+<title>Modelo · relatório 9:16 (tema Moderno)</title>
+<link rel="stylesheet" href="nova-moderno.css">
+<style>
+  /* fundo da área de trabalho: não faz parte do card */
+  body { background: #6e6e73; padding: 24px 0; }
+  /* Trocar para data-theme="dark" no <html> gera a versão escura. */
+</style>
+</head>
+<body>
+
+<div class="nova-r-shot" id="card">
+  <div class="nova-r-shot__topo">
+    <div class="nova-r-shot__logo">
+      <img src="nova-symbol.png" alt="" width="132" height="126">
+      <div>
+        <p class="nova-r-shot__word nova-m-wave--brand">NOVA</p>
+        <p class="nova-r-shot__sign">NÚCLEO OPERACIONAL <span>A</span> CREDIT</p>
+      </div>
+    </div>
+    <h1 class="nova-r-shot__h1" id="titulo"></h1>
+    <p class="nova-r-shot__lead" id="lead"></p>
+  </div>
+
+  <div class="nova-r-shot__corpo">
+    <div class="nova-r-shot__grid" id="cartoes"></div>
+
+    <div class="nova-r-shot__par">
+      <div class="nova-r-shot__bloco">
+        <h2 id="tituloBarras"></h2>
+        <p id="leadBarras"></p>
+        <div class="nova-r-shot__legenda">
+          <span><i style="background:var(--a-blu)"></i><span id="rotuloPos"></span></span>
+          <span><i style="background:var(--red)"></i><span id="rotuloNeg"></span></span>
+        </div>
+        <div class="nova-r-barras" id="barras"></div>
+      </div>
+      <div class="nova-r-shot__bloco">
+        <h2 id="tituloLinha"></h2>
+        <p id="leadLinha"></p>
+        <div id="linha"></div>
+      </div>
+    </div>
+
+    <div class="nova-r-shot__bloco">
+      <h2 id="tituloRank"></h2>
+      <p id="leadRank"></p>
+      <ul class="nova-r-rank" id="rank"></ul>
+    </div>
+  </div>
+
+  <p class="nova-r-shot__rodape" id="rodape"></p>
+  <div class="nova-r-shot__faixa" aria-hidden="true"></div>
+</div>
+
+<script>
+// ============================================================
+// 1. Troque só os dados daqui. O resto se ajusta.
+//    (valores abaixo são apenas exemplo)
+// ============================================================
+const DADOS = {
+  titulo: 'Título do relatório.',
+  lead: 'Subtítulo com período ou recorte · P1 a P4',
+  rodape: 'Fonte do dado · recorte do período · data de corte. Substitua por quem pediu o relatório.',
+  cartoes: [
+    { rotulo: 'Total', valor: '175', nota: 'registros', cor: 'var(--a-org)' },
+    { rotulo: 'Positivos', valor: '56', nota: '32% do total', cor: 'var(--a-blu)' },
+    { rotulo: 'Negativos', valor: '119', nota: '68% do total', cor: 'var(--red)' },
+    { rotulo: 'Taxa', valor: '32%', nota: 'média do período', cor: 'var(--a-grn)' },
+  ],
+  barras: {
+    titulo: 'Positivo x negativo',
+    lead: 'Altura da barra = total do período',
+    rotuloPos: 'Positivo',
+    rotuloNeg: 'Negativo',
+    escala: 40, // valor do topo da coluna
+    dias: [
+      { eixo: 'P1', pos: 12, neg: 21 },
+      { eixo: 'P2', pos: 13, neg: 22 },
+      { eixo: 'P3', pos: 8, neg: 20 },
+      { eixo: 'P4', pos: 6, neg: 12 },
+      { eixo: 'P5', pos: 3, neg: 14 },
+      { eixo: 'P6', pos: 9, neg: 17 },
+      { eixo: 'P7', pos: 5, neg: 13 },
+    ],
+  },
+  linha: {
+    titulo: 'Taxa ao longo do período',
+    lead: 'Escala 0–40% · média 32%',
+    max: 40,
+    passo: 10,
+    // abaixo: true põe o rótulo sob o ponto (use quando dois rótulos colidem)
+    pontos: [
+      { eixo: 'P1', valor: 36.4, abaixo: true },
+      { eixo: 'P2', valor: 37.1 },
+      { eixo: 'P3', valor: 28.6 },
+      { eixo: 'P4', valor: 33.3 },
+      { eixo: 'P5', valor: 17.6 },
+      { eixo: 'P6', valor: 34.6 },
+      { eixo: 'P7', valor: 27.8 },
+    ],
+  },
+  rank: {
+    titulo: 'Ranking',
+    lead: 'Total e taxa por item',
+    itens: [
+      { nome: 'Item de exemplo A', valor: 68, nota: '35,3%' },
+      { nome: 'Item de exemplo B', valor: 59, nota: '28,8%' },
+      { nome: 'Item de exemplo C', valor: 28, nota: '32,1%' },
+      { nome: 'Item de exemplo D', valor: 14, nota: '35,7%' },
+      { nome: 'Item de exemplo E', valor: 6, nota: '16,7%' },
+    ],
+  },
+};
+
+// ============================================================
+// 2. Montagem (não precisa mexer)
+// ============================================================
+const num = (v) => String(v).replace('.', ',');
+const H_COL = 152; // altura da coluna de barras, em px
+
+document.getElementById('titulo').textContent = DADOS.titulo;
+document.getElementById('lead').textContent = DADOS.lead;
+document.getElementById('rodape').textContent = DADOS.rodape;
+
+document.getElementById('cartoes').innerHTML = DADOS.cartoes.map((c) =>
+  '<article class="nova-r-shot__card" style="--accent-color:' + c.cor + '"><i></i><p>' + c.rotulo +
+  '</p><b>' + c.valor + '</b><small>' + c.nota + '</small></article>').join('');
+
+const B = DADOS.barras;
+document.getElementById('tituloBarras').textContent = B.titulo;
+document.getElementById('leadBarras').textContent = B.lead;
+document.getElementById('rotuloPos').textContent = B.rotuloPos;
+document.getElementById('rotuloNeg').textContent = B.rotuloNeg;
+document.getElementById('barras').innerHTML = B.dias.map((d) => {
+  const total = d.pos + d.neg;
+  const h = (v) => (v / B.escala * H_COL).toFixed(1);
+  return '<div class="nova-r-bar"><div class="nova-r-bar__col" style="height:' + H_COL + 'px">' +
+    '<span class="nova-r-bar__total">' + total + '</span>' +
+    '<i class="nova-r-bar__neg" style="height:' + h(d.neg) + 'px"></i>' +
+    '<i class="nova-r-bar__pos" style="height:' + h(d.pos) + 'px"></i>' +
+    '</div><span class="nova-r-bar__eixo">' + d.eixo + '</span></div>';
+}).join('');
+
+const L = DADOS.linha;
+document.getElementById('tituloLinha').textContent = L.titulo;
+document.getElementById('leadLinha').textContent = L.lead;
+(function () {
+  const W = 620, TOPO = 34, BASE = 268, X0 = 84, X1 = 596;
+  const py = (v) => BASE - (v / L.max) * (BASE - TOPO);
+  const px = (i) => X0 + i * ((X1 - X0) / (L.pontos.length - 1));
+  let g = '';
+  for (let v = 0; v <= L.max; v += L.passo) {
+    g += '<line x1="92" x2="608" y1="' + py(v).toFixed(1) + '" y2="' + py(v).toFixed(1) + '" stroke="var(--hair)" stroke-width="1.5"></line>' +
+      '<text x="78" y="' + (py(v) + 9).toFixed(1) + '" text-anchor="end" class="nova-r-line__eixo">' + v + '%</text>';
+  }
+  const pontos = L.pontos.map((p, i) => px(i).toFixed(1) + ',' + py(p.valor).toFixed(1)).join(' ');
+  const marcas = L.pontos.map((p, i) => '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(p.valor).toFixed(1) +
+    '" r="6.5" fill="var(--card-b)" stroke="var(--a-blu)" stroke-width="3"></circle>').join('');
+  const valores = L.pontos.map((p, i) => {
+    const y = p.abaixo ? py(p.valor) + 34 : py(p.valor) - 18;
+    const anchor = i === 0 ? 'start' : (i === L.pontos.length - 1 ? 'end' : 'middle');
+    const x = i === 0 ? px(i) - 6 : (i === L.pontos.length - 1 ? px(i) + 8 : px(i));
+    return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="' + anchor +
+      '" class="nova-r-line__valor">' + num(p.valor.toFixed(1)) + '%</text>';
+  }).join('');
+  const eixo = L.pontos.map((p, i) => {
+    const anchor = i === 0 ? 'start' : (i === L.pontos.length - 1 ? 'end' : 'middle');
+    const x = i === 0 ? 70 : (i === L.pontos.length - 1 ? 612 : px(i));
+    return '<text x="' + x + '" y="312" text-anchor="' + anchor + '" class="nova-r-line__eixo">' + p.eixo + '</text>';
+  }).join('');
+  document.getElementById('linha').innerHTML =
+    '<svg class="nova-r-line" viewBox="0 0 ' + W + ' 330" role="img" aria-label="' + L.titulo + '">' + g +
+    '<polyline points="' + pontos + '" fill="none" stroke="var(--a-blu)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>' +
+    marcas + valores + eixo + '</svg>';
+})();
+
+const R = DADOS.rank;
+document.getElementById('tituloRank').textContent = R.titulo;
+document.getElementById('leadRank').textContent = R.lead;
+(function () {
+  const maior = Math.max.apply(null, R.itens.map((i) => i.valor));
+  document.getElementById('rank').innerHTML = R.itens.map((i) =>
+    '<li><span class="nova-r-rank__nome">' + i.nome + '</span>' +
+    '<span class="nova-r-rank__trilha"><i style="width:' + (i.valor / maior * 100).toFixed(1) + '%"></i></span>' +
+    '<span class="nova-r-rank__num"><b>' + i.valor + '</b><small>' + i.nota + '</small></span></li>').join('');
+})();
+
+// ============================================================
+// 3. Conferência: o card TEM que fechar 1920px.
+//    Se sobrar ou faltar, ajuste os paddings de .nova-r-shot__topo,
+//    __corpo e __rodape (ou tire um bloco). Nunca encolha a tipografia.
+// ============================================================
+console.log('altura do card:', document.getElementById('card').scrollHeight, '(alvo: 1920)');
+</script>
+</body>
+</html>
