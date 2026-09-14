@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apresentação da Marca - MA PRIME TEC</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: var(--surface);
+    }
+    .presentation-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 60px 40px;
+      background: var(--bg);
+      border-radius: 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+      margin-top: 40px;
+      margin-bottom: 40px;
+    }
+    .presentation-header {
+      text-align: center;
+      margin-bottom: 60px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--line);
+    }
+    .presentation-header h1 {
+      margin-top: 20px;
+      font-size: 48px;
+    }
+    .presentation-header .subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .section {
+      margin-bottom: 60px;
+    }
+    .section h2 {
+      font-size: 32px;
+      margin-bottom: 24px;
+      color: var(--text);
+    }
+    .section-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 30px;
+      border: 1px solid var(--line);
+    }
+    
+    /* Colors */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+    }
+    .color-item {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .color-swatch {
+      height: 100px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .color-info {
+      font-size: 14px;
+    }
+    .color-info b {
+      display: block;
+      color: var(--text);
+    }
+    .color-info span {
+      color: var(--muted);
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    /* Typography */
+    .type-sample {
+      margin-bottom: 20px;
+    }
+    .type-sample h3 {
+      font-family: 'DM Sans', sans-serif;
+      margin: 0 0 8px 0;
+      color: var(--text);
+    }
+    .type-sample p {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--muted);
+      margin: 0;
+    }
+    .type-bold { font-weight: 700; font-size: 36px; }
+    .type-medium { font-weight: 500; font-size: 24px; }
+    .type-regular { font-weight: 400; font-size: 16px; }
+
+    /* Mascote */
+    .mascot-display {
+      text-align: center;
+      background: #f5f5f7;
+      padding: 40px;
+      border-radius: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .mascot-display img {
+      max-width: 250px;
+      position: relative;
+      z-index: 2;
+    }
+    .logo-display {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .logo-box {
+      padding: 40px;
+      border-radius: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: 1px solid var(--line);
+    }
+    .logo-box.dark {
+      background: #1D1D1F;
+    }
+    .logo-box.light {
+      background: #FFFFFF;
+    }
+    .logo-box img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    @media(max-width: 768px) {
+      .section-content {
+        grid-template-columns: 1fr;
+      }
+      .presentation-container {
+        padding: 30px 20px;
+        margin-top: 0;
+        border-radius: 0;
+      }
+      .presentation-header h1 {
+        font-size: 36px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="presentation-container">
+    
+    <div class="presentation-header">
+      <img src="marca/logo-claro.svg" alt="MA PRIME TEC" width="300" style="margin-bottom: 20px;">
+      <h1>Direção de Arte e Marca</h1>
+      <p class="subtitle">Apresentação dos elementos visuais, paleta de cores e tipografia desenvolvidos para a nova identidade da MA PRIME TEC.</p>
+    </div>
+
+    <!-- Logomarca -->
+    <div class="section">
+      <h2>1. Logomarca</h2>
+      <p class="subtitle" style="margin-bottom: 24px;">Versões de alta resolução (SVG) aplicáveis em fundos claros e escuros, garantindo legibilidade e contraste.</p>
+      <div class="logo-display">
+        <div class="logo-box light">
+          <img src="marca/logo-claro.svg" alt="Logo Claro">
+        </div>
+        <div class="logo-box dark">
+          <img src="marca/logo-escuro.svg" alt="Logo Escuro">
+        </div>
+      </div>
+    </div>
+
+    <!-- Mascote -->
+    <div class="section">
+      <h2>2. O Mascote</h2>
+      <div class="section-content">
+        <div class="card mascot-display">
+          <img src="marca/ma-prime-tec-logo.png" alt="Mascote MA PRIME TEC" style="clip-path: inset(0 60% 0 0); width: 625px; max-width: none; transform: translateX(-20%);">
+        </div>
+        <div>
+          <p class="lead">Personagem exclusivo em pixel art (16-bits), combinando o visual acolhedor de um técnico experiente com uma pegada retrô e nostálgica.</p>
+          <ul style="color: var(--muted); line-height: 1.8; margin-top: 20px;">
+            <li><b>Acolhimento:</b> Expressão amigável, barba branca e óculos.</li>
+            <li><b>Profissionalismo:</b> Equipado com notebook e chave de precisão.</li>
+            <li><b>Nostalgia:</b> Estética gamer que dialoga diretamente com o público de tecnologia.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tipografia -->
+    <div class="section">
+      <h2>3. Tipografia Oficial</h2>
+      <p class="subtitle" style="margin-bottom: 24px;">A família tipográfica <strong>DM Sans</strong> foi escolhida por sua clareza geométrica e excelente legibilidade em telas digitais.</p>
+      
+      <div class="card">
+        <div class="type-sample">
+          <h3 class="type-bold">DM Sans Bold (700)</h3>
+          <p>MA PRIME TEC - Usado para o nome comercial, grandes títulos e botões de ação.</p>
+        </div>
+        <hr style="border: 0; border-top: 1px solid var(--line); margin: 20px 0;">
+        <div class="type-sample">
+          <h3 class="type-medium">DM Sans Medium (500)</h3>
+          <p>Usado para rótulos, botões secundários e informações de destaque médio.</p>
+        </div>
+        <hr style="border: 0; border-top: 1px solid var(--line); margin: 20px 0;">
+        <div class="type-sample">
+          <h3 class="type-regular">DM Sans Regular (400)</h3>
+          <p>Usado para descrições, textos longos, instruções e campos do fluxo de atendimento.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cores -->
+    <div class="section">
+      <h2>4. Paleta de Cores</h2>
+      <p class="subtitle" style="margin-bottom: 24px;">Cores definidas para a interface do sistema, guiando a navegação e transmitindo confiança e clareza.</p>
+      
+      <div class="color-grid">
+        <div class="color-item">
+          <div class="color-swatch" style="background: #0071E3;"></div>
+          <div class="color-info">
+            <b>Azul Principal</b>
+            <span>#0071E3</span>
+            <span style="display: block; margin-top: 4px;">Ações, links e botões</span>
+          </div>
+        </div>
+        
+        <div class="color-item">
+          <div class="color-swatch" style="background: #1D1D1F;"></div>
+          <div class="color-info">
+            <b>Grafite</b>
+            <span>#1D1D1F</span>
+            <span style="display: block; margin-top: 4px;">Texto principal</span>
+          </div>
+        </div>
+
+        <div class="color-item">
+          <div class="color-swatch" style="background: #F5F5F7;"></div>
+          <div class="color-info">
+            <b>Cinza Claro</b>
+            <span>#F5F5F7</span>
+            <span style="display: block; margin-top: 4px;">Superfícies e fundos</span>
+          </div>
+        </div>
+
+        <div class="color-item">
+          <div class="color-swatch" style="background: #25D366;"></div>
+          <div class="color-info">
+            <b>Verde WhatsApp</b>
+            <span>#25D366</span>
+            <span style="display: block; margin-top: 4px;">Confirmação e contato</span>
+          </div>
+        </div>
+
+        <div class="color-item">
+          <div class="color-swatch" style="background: #FFFFFF; border: 1px solid #E5E5EB;"></div>
+          <div class="color-info">
+            <b>Branco</b>
+            <span>#FFFFFF</span>
+            <span style="display: block; margin-top: 4px;">Fundo principal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 80px; padding-top: 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px;">
+      <p>Desenvolvido para MA PRIME TEC — Assistência de Informática</p>
+    </div>
+
+  </div>
+
+</body>
+</html>
