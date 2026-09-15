@@ -152,10 +152,10 @@ function renderTrack() {
         <button class="text-button" data-next="0">← Voltar</button>
       </div>
       <h2>Acompanhar atendimento</h2>
-      <p class="subtitle">Digite o número do seu Protocolo (Ex: OS-1234) para ver o status do seu aparelho.</p>
+      <p class="subtitle">Digite o número do seu Protocolo (Ex: OS-20231010-ABCD5) para ver o status do seu aparelho.</p>
       <form id="track-form" class="u-flex-col">
         <label class="field" for="protocol">Protocolo</label>
-        <input type="text" id="protocol" placeholder="OS-1234" required oninput="this.value = this.value.toUpperCase()">
+        <input type="text" id="protocol" placeholder="OS-20231010-ABCD5" required oninput="this.value = this.value.toUpperCase()">
         <div class="actions">
           <button class="primary u-w-full" type="submit" id="track-btn">Consultar Status</button>
         </div>

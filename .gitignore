@@ -3,3 +3,8 @@ __pycache__/
 
 .vercel
 node_modules
+.firebase/
+.firebaserc
+.env*
+serviceAccountKey.json
+scripts/*.json

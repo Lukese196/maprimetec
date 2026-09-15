@@ -8,33 +8,30 @@ service cloud.firestore {
           && request.auth.token.email in ['loliver242@gmail.com', 'marcus190373@gmail.com'];
     }
 
-    function osValida(osId) {
-      return request.resource.data.status == 'aberto'
-          && request.resource.data.protocol == osId
-          && request.resource.data.keys().hasOnly([
-               'protocol','client','clientCpf','phone','device','model',
-               'problem','details','status','createdAt','updatedAt',
-               'origin'
-             ])
-          && request.resource.data.keys().hasAll([
-               'protocol','client','clientCpf','phone','device','problem','status','createdAt'
-             ])
-          && request.resource.data.client is string
-          && request.resource.data.client.size() > 1
-          && request.resource.data.client.size() < 120
-          && request.resource.data.problem.size() < 2000
-          && request.resource.data.clientCpf.matches('^[0-9]{11}$|^[0-9]{14}$');
-    }
-
     match /clients/{clientId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isAdmin();          // NUNCA request.auth != null
     }
 
     match /os_list/{osId} {
-      allow get: if true;                       // consulta pública por protocolo (ID)
-      allow list: if isAdmin();
-      allow create: if request.auth != null && osValida(osId);
-      allow update, delete: if isAdmin();
+      allow get: if true;                       // consulta pública pelo protocolo (ID)
+      allow list: if isAdmin();                 // NUNCA para anônimo
+      allow update, delete: if isAdmin();       // NUNCA para anônimo
+
+      allow create: if request.auth != null
+        && request.resource.data.status == 'aberto'
+        && request.resource.data.protocol == osId
+        && request.resource.data.keys().hasOnly([
+             'protocol','client','clientCpf','phone','device','model',
+             'problem','details','status','createdAt','updatedAt'
+           ])
+        && request.resource.data.keys().hasAll([
+             'protocol','client','clientCpf','phone','device','problem','status','createdAt'
+           ])
+        && request.resource.data.client is string
+        && request.resource.data.client.size() > 1
+        && request.resource.data.client.size() <= 120
+        && request.resource.data.problem.size() <= 2000
+        && request.resource.data.clientCpf.matches('^[0-9]{11}$|^[0-9]{14}$');
 
       match /history/{histId} {
         allow read, write: if isAdmin();

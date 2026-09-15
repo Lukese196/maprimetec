@@ -241,6 +241,17 @@ textarea {
 }
 
 /* Utilities */
+.shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--s3);
+  width: 100%;
+}
+.u-icon {
+  width: var(--s4);
+  height: var(--s4);
+  flex-shrink: 0;
+}
 .u-w-full { width: 100%; }
 .u-max-w-320 { max-width: 320px; }
 .u-flex-1 { flex: 1; }
