@@ -2,32 +2,31 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Admin - MA PRIME TEC</title>
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
-  
+
   <link rel="stylesheet" href="base.css">
   <link rel="stylesheet" href="admin.css">
   <script>
     const savedTheme = localStorage.getItem('mpt-theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const theme = savedTheme || (prefersDark ? 'dark' : 'light');
-    document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.theme = savedTheme || (prefersDark ? 'dark' : 'light');
   </script>
 </head>
 <body>
 
-  <!-- Login Screen -->
-  <div id="login-screen" class="u-wrapper" style="display:flex; justify-content:center; align-items:center; min-height:100vh;">
-    <div class="card" style="max-width:400px; text-align:center; padding:var(--s6) var(--s5);">
-      <h2 style="margin:0 0 var(--s2) 0;">Acesso Restrito</h2>
-      <p class="subtitle" style="margin-bottom:var(--s6);">Área de gerenciamento técnico</p>
-      
-      <button type="button" class="btn primary" id="google-login-btn" style="width:100%; display:flex; justify-content:center; gap:var(--s2); background:var(--text); color:var(--bg);">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+  <!-- Tela de login -->
+  <div id="login-screen" class="auth-screen" hidden>
+    <div class="card auth-card">
+      <h2>Acesso Restrito</h2>
+      <p class="subtitle">Área de gerenciamento técnico</p>
+
+      <button type="button" class="btn primary block" id="google-login-btn">
+        <svg viewBox="0 0 24 24" fill="currentColor" class="u-icon" aria-hidden="true">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -35,157 +34,142 @@
         </svg>
         Entrar com Google
       </button>
-      
-      <p class="micro u-hidden" id="login-error" style="color:var(--danger); margin-top:var(--s4);"></p>
+
+      <p class="micro u-hidden" id="login-error" style="color:var(--danger)"></p>
     </div>
   </div>
 
-  <!-- Dashboard -->
+  <!-- Painel -->
   <div id="dashboard" hidden>
-    <!-- Header Admin -->
+
     <header class="header-admin">
-      <div class="header-admin-inner">
-        <a class="brand" href="/" aria-label="Voltar ao site" style="text-decoration:none;">
-          <span class="brand-icon">m<span>+</span></span>
-          <span style="font-weight:700; color:var(--text); line-height:1.2;">
-            MA PRIME <b>TEC</b><br>
-            <small style="font-weight:500; font-size:10px; letter-spacing:1px; color:var(--blue);">PAINEL ADMIN</small>
+      <div class="header-admin-inner shell">
+        <a class="brand" href="/" aria-label="Voltar ao site">
+          <span class="brand-icon" aria-hidden="true">m<span>+</span></span>
+          <span class="brand-text">
+            MA PRIME <b>TEC</b>
+            <small>PAINEL ADMIN</small>
           </span>
         </a>
-        
-        <div style="display:flex; align-items:center; gap:var(--s3);">
-          <button id="theme-toggle" class="btn secondary" style="min-height:44px; width:44px; padding:0; display:flex; justify-content:center; align-items:center;" aria-label="Alternar tema" aria-pressed="false">☀️</button>
-          <button id="logout" class="btn secondary" style="min-height:44px;">Sair</button>
+
+        <div class="header-actions">
+          <button type="button" id="theme-toggle" class="btn secondary icon" aria-label="Alternar tema" aria-pressed="false">☀️</button>
+          <button type="button" id="logout" class="btn secondary">Sair</button>
         </div>
       </div>
     </header>
 
-    <div class="u-wrapper" style="padding-top:var(--s4); padding-bottom:var(--s6);">
-      
-      <!-- Tabs -->
+    <main class="u-wrapper shell" style="padding-block: var(--s4) var(--s6)">
+
       <div class="tab-list" role="tablist">
-        <button class="tab" role="tab" aria-selected="true" data-target="tab-os">Ordens de serviço</button>
-        <button class="tab" role="tab" aria-selected="false" data-target="tab-clients">Clientes</button>
+        <button class="tab" type="button" role="tab" aria-selected="true" data-target="tab-os">Ordens de serviço</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-target="tab-clients">Clientes</button>
       </div>
 
-      <!-- Tab Content: OS -->
-      <div id="tab-os" class="card tab-content" role="tabpanel">
-        <div class="filter-bar">
-          <h2 style="margin:0; font-size:24px;">Ordens de serviço</h2>
-          <button class="btn primary" id="btn-new-os" data-open="new-os-modal">+ Nova OS</button>
+      <!-- Ordens de serviço -->
+      <section id="tab-os" class="card tab-content" role="tabpanel">
+        <div class="section-head">
+          <h2>Ordens de serviço</h2>
+          <button type="button" class="btn primary" id="btn-new-os" data-open="new-os-modal">+ Nova OS</button>
         </div>
-        
-        <!-- Search and Filters -->
-        <div style="display:flex; flex-direction:column; gap:var(--s3); margin-bottom:var(--s5);">
-          <!-- Search -->
-          <div style="position:relative; width:100%; max-width:400px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute; left:16px; top:14px; color:var(--muted);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="search" id="search-input" placeholder="Buscar por protocolo, cliente ou telefone..." style="width:100%; padding:14px 16px 14px 44px; border-radius:var(--r-pill); border:1px solid var(--line); background:var(--surface); color:var(--text); font-size:16px;">
+
+        <div class="toolbar">
+          <div class="search-field">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="search" id="search-input" placeholder="Buscar por protocolo, cliente ou telefone..." aria-label="Buscar ordens de serviço">
             <div id="search-announcer" aria-live="polite" class="u-sr-only"></div>
           </div>
-          
-          <!-- Filters -->
-          <div style="display:flex; gap:var(--s2); overflow-x:auto; padding-bottom:var(--s1); scrollbar-width:none;">
-            <button class="filter-btn" aria-pressed="true" data-filter="all">Todas <span class="count">0</span></button>
-            <button class="filter-btn" aria-pressed="false" data-filter="aberto">Abertas <span class="count">0</span></button>
-            <button class="filter-btn" aria-pressed="false" data-filter="reparo">Em Reparo <span class="count">0</span></button>
-            <button class="filter-btn" aria-pressed="false" data-filter="finalizado">Finalizadas <span class="count">0</span></button>
+
+          <div id="filter-container" class="filter-bar">
+            <button type="button" class="filter-btn" aria-pressed="true" data-filter="all">Todas <span class="count">0</span></button>
           </div>
         </div>
 
-        <div id="os-list-container">
-          <!-- Table injected via JS -->
-          <div class="empty-state"><div class="spinner"></div><p>Carregando...</p></div>
+        <div class="list-scroll">
+          <div id="os-list-container">
+            <div class="empty-state"><div class="spinner"></div><p>Carregando...</p></div>
+          </div>
         </div>
-      </div>
-      
-      <!-- Tab Content: Clients -->
-      <div id="tab-clients" class="card tab-content" role="tabpanel" hidden>
-        <div class="filter-bar">
-          <h2 style="margin:0; font-size:24px;">Clientes</h2>
-          <button class="btn primary" id="btn-new-client" data-open="new-client-modal">+ Novo Cliente</button>
+      </section>
+
+      <!-- Clientes -->
+      <section id="tab-clients" class="card tab-content" role="tabpanel" hidden>
+        <div class="section-head">
+          <h2>Clientes</h2>
+          <button type="button" class="btn primary" id="btn-new-client" data-open="new-client-modal">+ Novo Cliente</button>
         </div>
-        
-        <div id="client-list">
-          <div class="empty-state"><div class="spinner"></div><p>Carregando...</p></div>
+
+        <div class="list-scroll">
+          <div id="client-list">
+            <div class="empty-state"><div class="spinner"></div><p>Carregando...</p></div>
+          </div>
         </div>
-      </div>
-      
-    </div>
+      </section>
+
+    </main>
   </div>
 
-  <!-- Modal: Edit OS -->
+  <!-- Modal: editar OS -->
   <div id="edit-modal" class="modal-backdrop" hidden>
     <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-protocol">
-      
+
       <div class="modal-header">
-        <h3 style="margin:0; font-size:20px;">OS <span id="modal-protocol" style="color:var(--blue);"></span></h3>
-        <button class="btn text-button" data-close="edit-modal" aria-label="Fechar modal" style="min-height:44px; width:44px; font-size:24px; padding:0; display:flex; justify-content:center; align-items:center;">&times;</button>
+        <h3>OS <span id="modal-protocol" style="color:var(--accent)"></span></h3>
+        <button type="button" class="btn ghost icon" data-close="edit-modal" aria-label="Fechar">&times;</button>
       </div>
-      
+
       <div class="modal-body">
-        
-        <!-- Info Grid -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--s4); background:var(--surface); padding:var(--s4); border-radius:var(--r-card); margin-bottom:var(--s5);">
-          <div style="grid-column:1/-1; display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
-              <span class="micro" style="color:var(--muted); margin-bottom:var(--s1); display:block;">Cliente</span>
-              <strong id="modal-client" style="font-size:16px;"></strong>
+
+        <div class="info-grid">
+          <div class="full info-head">
+            <div class="info-item">
+              <span class="label">Cliente</span>
+              <strong id="modal-client"></strong>
             </div>
-            <button type="button" class="btn primary" id="modal-whatsapp-btn" style="background:var(--green); min-height:44px; padding:0 12px; font-size:13px; border-radius:var(--r-pill);">
-              WhatsApp ↗
-            </button>
+            <button type="button" class="btn whatsapp" id="modal-whatsapp-btn">WhatsApp ↗</button>
           </div>
-          <div>
-            <span class="micro" style="color:var(--muted); margin-bottom:var(--s1); display:block;">Equipamento</span>
+          <div class="info-item">
+            <span class="label">Equipamento</span>
             <strong id="modal-device"></strong>
           </div>
-          <div>
-            <span class="micro" style="color:var(--muted); margin-bottom:var(--s1); display:block;">Telefone</span>
+          <div class="info-item">
+            <span class="label">Telefone</span>
             <strong id="modal-phone"></strong>
           </div>
-          <div style="grid-column: 1 / -1;">
-            <span class="micro" style="color:var(--muted); margin-bottom:var(--s1); display:block;">Problema relatado</span>
-            <span id="modal-problem" style="line-height:1.5;"></span>
+          <div class="info-item full">
+            <span class="label">Problema relatado</span>
+            <p id="modal-problem"></p>
           </div>
         </div>
 
         <form id="edit-form">
-          <!-- Status Picker -->
-          <div style="margin-bottom:var(--s5);">
-            <label class="field" style="margin-bottom:var(--s2); font-weight:600;">Status da ordem</label>
-            <input type="hidden" id="status-hidden-input" name="status">
-            <div class="status-picker">
-              <button type="button" class="status-option" data-value="aberto" aria-checked="false">Aberto</button>
-              <button type="button" class="status-option" data-value="analise" aria-checked="false">Em Análise</button>
-              <button type="button" class="status-option" data-value="orcamento" aria-checked="false">Orçamento</button>
-              <button type="button" class="status-option" data-value="reparo" aria-checked="false">Em Reparo</button>
-              <button type="button" class="status-option" data-value="finalizado" aria-checked="false">Finalizado</button>
-            </div>
+          <div class="form-group">
+            <label class="field" for="edit-os-status">Status da ordem</label>
+            <select id="edit-os-status" required></select>
           </div>
-          
-          <div style="margin-bottom:var(--s5);">
-            <label class="field">Valor do orçamento (R$)</label>
-            <input type="number" step="0.01" id="os-budget" placeholder="0.00">
+
+          <div class="form-group">
+            <label class="field" for="os-budget">Valor do orçamento (R$)</label>
+            <input type="number" step="0.01" min="0" id="os-budget" placeholder="0,00">
           </div>
-          
-          <div style="margin-bottom:var(--s5);">
-            <label class="field">Adicionar nota interna (Opcional)</label>
-            <textarea id="os-notes" placeholder="Ex: Peça encomendada..." style="min-height:100px;"></textarea>
+
+          <div class="form-group">
+            <label class="field" for="os-notes">Adicionar nota interna (opcional)</label>
+            <textarea id="os-notes" placeholder="Ex: Peça encomendada..."></textarea>
           </div>
-          
-          <!-- History -->
-          <div style="margin-bottom:var(--s5);">
-            <h4 style="margin:0 0 var(--s3) 0; font-size:14px;">Histórico</h4>
-            <div id="modal-history" style="background:var(--surface); padding:var(--s3) var(--s4); border-radius:var(--r-card); max-height:200px; overflow-y:auto;">
-              <!-- history items -->
-            </div>
+
+          <div class="form-group">
+            <h4 class="field">Histórico</h4>
+            <div id="modal-history" class="history-box"></div>
           </div>
-          
+
           <div class="modal-actions">
             <button type="button" class="btn secondary" data-close="edit-modal">Voltar</button>
-            <div style="display:flex; gap:var(--s2);">
-              <button type="button" class="btn secondary" style="background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger-bg);" onclick="window.confirmCancel()">Cancelar OS</button>
+            <div class="group">
+              <button type="button" class="btn danger" id="cancel-os-btn">Cancelar OS</button>
               <button type="submit" class="btn primary">Salvar alterações</button>
             </div>
           </div>
@@ -194,29 +178,29 @@
     </div>
   </div>
 
-  <!-- Modal: Nova OS -->
+  <!-- Modal: nova OS -->
   <div id="new-os-modal" class="modal-backdrop" hidden>
     <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="new-os-title">
       <div class="modal-header">
-        <h3 id="new-os-title" style="margin:0; font-size:20px;">Nova ordem de serviço</h3>
-        <button class="btn text-button" data-close="new-os-modal" aria-label="Fechar" style="min-height:44px; width:44px; font-size:24px; padding:0;">&times;</button>
+        <h3 id="new-os-title">Nova ordem de serviço</h3>
+        <button type="button" class="btn ghost icon" data-close="new-os-modal" aria-label="Fechar">&times;</button>
       </div>
       <div class="modal-body">
         <form id="new-os-form">
-          
-          <div style="display:flex; gap:var(--s2); align-items:flex-end; margin-bottom:var(--s4);">
-            <div style="flex:1;">
-              <label class="field">Cliente *</label>
+
+          <div class="form-group">
+            <label class="field" for="new-os-client-select">Cliente *</label>
+            <div style="display:flex; gap:var(--s2)">
               <select id="new-os-client-select" required>
                 <option value="">Selecione um cliente</option>
               </select>
+              <button type="button" class="btn secondary icon" data-open="new-client-modal" title="Novo cliente" aria-label="Novo cliente">+</button>
             </div>
-            <button type="button" class="btn secondary" data-open="new-client-modal" style="padding:0 var(--s3); font-size:20px; font-weight:400;" title="Novo Cliente" aria-label="Novo Cliente">+</button>
           </div>
-          
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--s4); margin-bottom:var(--s4);">
+
+          <div class="form-row form-group">
             <div>
-              <label class="field">Equipamento *</label>
+              <label class="field" for="new-device">Equipamento *</label>
               <select id="new-device" required>
                 <option value="Notebook">Notebook</option>
                 <option value="Computador">Computador</option>
@@ -225,60 +209,67 @@
               </select>
             </div>
             <div>
-              <label class="field">Modelo/Marca</label>
+              <label class="field" for="new-model">Modelo / Marca</label>
               <input type="text" id="new-model" placeholder="Opcional">
             </div>
           </div>
-          
-          <div style="margin-bottom:var(--s5);">
-            <label class="field">Problema relatado *</label>
-            <textarea id="new-problem" required placeholder="Descreva o problema da máquina..." style="min-height:100px;"></textarea>
+
+          <div class="form-group">
+            <label class="field" for="new-problem">Problema relatado *</label>
+            <textarea id="new-problem" required placeholder="Descreva o problema da máquina..."></textarea>
           </div>
-          
-          <div class="modal-actions" style="justify-content:flex-end;">
+
+          <div class="modal-actions">
             <button type="button" class="btn secondary" data-close="new-os-modal">Cancelar</button>
-            <button type="submit" class="btn primary">Criar OS</button>
+            <div class="group">
+              <button type="submit" class="btn primary">Criar OS</button>
+            </div>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Novo Cliente -->
+  <!-- Modal: novo cliente -->
   <div id="new-client-modal" class="modal-backdrop" hidden>
     <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="new-client-title">
       <div class="modal-header">
-        <h3 id="new-client-title" style="margin:0; font-size:20px;">Novo cliente</h3>
-        <button class="btn text-button" data-close="new-client-modal" aria-label="Fechar" style="min-height:44px; width:44px; font-size:24px; padding:0;">&times;</button>
+        <h3 id="new-client-title">Novo cliente</h3>
+        <button type="button" class="btn ghost icon" data-close="new-client-modal" aria-label="Fechar">&times;</button>
       </div>
       <div class="modal-body">
         <form id="new-client-form">
-          <div style="margin-bottom:var(--s4);">
-            <label class="field">Nome completo *</label>
-            <input type="text" id="new-cli-name" required placeholder="Ex: João Silva">
+          <div class="form-group">
+            <label class="field" for="new-cli-name">Nome completo *</label>
+            <input type="text" id="new-cli-name" required placeholder="Ex: João Silva" autocomplete="name">
           </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--s4); margin-bottom:var(--s4);">
+
+          <div class="form-row form-group">
             <div>
-              <label class="field">CPF / CNPJ *</label>
-              <input type="text" id="new-cli-cpf" required placeholder="Apenas números" oninput="this.value = this.value.replace(/\D/g, '')">
+              <label class="field" for="new-cli-cpf">CPF / CNPJ *</label>
+              <input type="text" id="new-cli-cpf" required placeholder="Apenas números" inputmode="numeric">
             </div>
             <div>
-              <label class="field">WhatsApp *</label>
-              <input type="tel" id="new-cli-phone" required placeholder="DDD + Número">
+              <label class="field" for="new-cli-phone">WhatsApp *</label>
+              <input type="tel" id="new-cli-phone" required placeholder="DDD + Número" inputmode="tel">
             </div>
           </div>
-          <div style="margin-bottom:var(--s4);">
-            <label class="field">Endereço</label>
+
+          <div class="form-group">
+            <label class="field" for="new-cli-address">Endereço</label>
             <input type="text" id="new-cli-address" placeholder="Rua, número, bairro">
           </div>
-          <div style="margin-bottom:var(--s5);">
-            <label class="field">E-mail</label>
-            <input type="email" id="new-cli-email" placeholder="cliente@email.com">
+
+          <div class="form-group">
+            <label class="field" for="new-cli-email">E-mail</label>
+            <input type="email" id="new-cli-email" placeholder="cliente@email.com" autocomplete="email">
           </div>
-          
-          <div class="modal-actions" style="justify-content:flex-end;">
+
+          <div class="modal-actions">
             <button type="button" class="btn secondary" data-close="new-client-modal">Cancelar</button>
-            <button type="submit" class="btn primary">Salvar cliente</button>
+            <div class="group">
+              <button type="submit" class="btn primary">Salvar cliente</button>
+            </div>
           </div>
         </form>
       </div>

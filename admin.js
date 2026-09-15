@@ -17,6 +17,16 @@ const searchAnnouncer = document.getElementById('search-announcer');
 
 const allowedEmails = ['loliver242@gmail.com', 'marcus190373@gmail.com'];
 
+// Guarda o conteúdo original do botão para restaurar após loading/erro.
+const loginButton = document.getElementById('google-login-btn');
+const loginButtonHTML = loginButton ? loginButton.innerHTML : '';
+
+function resetLoginButton() {
+  if (!loginButton) return;
+  loginButton.disabled = false;
+  loginButton.innerHTML = loginButtonHTML;
+}
+
 // Helper: Escape HTML
 const escapeHTML = value => String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
@@ -123,23 +133,14 @@ onAuthStateChanged(auth, async (user) => {
       loginError.classList.remove('u-hidden');
       loginScreen.removeAttribute('hidden');
       dashboard.setAttribute('hidden', '');
-      const btn = document.getElementById('google-login-btn');
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="u-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Entrar com Google';
-      }
+      resetLoginButton();
       return;
     }
 
     loginScreen.setAttribute('hidden', '');
     dashboard.removeAttribute('hidden');
     
-    // Reset login button if it was disabled
-    const btn = document.getElementById('google-login-btn');
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="u-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Entrar com Google';
-    }
+    resetLoginButton();
     
     unsubscribeAll();
     loadOS();
@@ -151,11 +152,10 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-document.getElementById('google-login-btn').addEventListener('click', async (e) => {
+loginButton?.addEventListener('click', async (e) => {
   e.preventDefault();
-  const btn = document.getElementById('google-login-btn');
-  const btnContent = btn.innerHTML;
-  
+  const btn = loginButton;
+
   try {
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Autenticando...';
@@ -168,9 +168,8 @@ document.getElementById('google-login-btn').addEventListener('click', async (e) 
     showToast("Erro no login: " + err.message, "error");
     loginError.textContent = 'Falha: ' + err.message;
     loginError.classList.remove('u-hidden');
-    
-    btn.disabled = false;
-    btn.innerHTML = btnContent;
+  } finally {
+    resetLoginButton();
   }
 });
 
@@ -217,6 +216,37 @@ if (searchInput) {
 }
 
 function updateFilterCounts() {
+  const filterContainer = document.getElementById('filter-container');
+  if (filterContainer && filterContainer.children.length <= 1) {
+    STATUS.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.dataset.filter = s.id;
+      btn.innerHTML = `${s.label} <span class="count">0</span>`;
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.setAttribute('aria-pressed', 'false'));
+        e.currentTarget.setAttribute('aria-pressed', 'true');
+        activeFilter = e.currentTarget.dataset.filter;
+        currentPage = 1;
+        renderTable();
+      });
+      filterContainer.appendChild(btn);
+    });
+    
+    // Reattach listener to "Todas" button since we only added listeners to dynamically created ones
+    const btnAll = filterContainer.querySelector('[data-filter="all"]');
+    if (btnAll) {
+      btnAll.addEventListener('click', (e) => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.setAttribute('aria-pressed', 'false'));
+        e.currentTarget.setAttribute('aria-pressed', 'true');
+        activeFilter = 'all';
+        currentPage = 1;
+        renderTable();
+      });
+    }
+  }
+
   const counts = { all: osDataList.length };
   STATUS.forEach(s => counts[s.id] = 0);
   osDataList.forEach(os => {
@@ -268,31 +298,31 @@ function renderClients() {
     }
   });
   
-  let html = `<div class="os-list-header" style="grid-template-columns: 2fr 1fr 1fr 80px 100px;">
-    <div>Nome</div><div>WhatsApp</div><div>Cadastrado</div><div>OS</div><div>Ações</div>
-  </div>`;
-  
-  html += `<div class="os-list">`;
+  let html = `<div class="os-list os-list--clients">
+    <div class="os-list-header">
+      <div>Nome</div><div>WhatsApp</div><div>Cadastrado</div><div>OS</div><div></div>
+    </div>`;
+
   html += clientDataList.map(c => `
-    <div class="os-row" style="grid-template-columns: 2fr 1fr 1fr 80px 100px;">
+    <div class="os-row">
       <div class="os-row-client">
         <strong>${escapeHTML(c.name)}</strong>
         <span>${escapeHTML(c.cpf)}</span>
       </div>
-      <div>${escapeHTML(c.phone)}</div>
-      <div class="os-row-date">${formatDate(c.createdAt)}</div>
-        <div>
-          <span class="count" style="background:var(--surface); padding: 4px 10px; border-radius:var(--r-pill); font-weight:700;">
-            ${osCountByClient[String(c.id).replace(/\D/g, '')] || 0}
-          </span>
-        </div>
-      <div style="display:flex; gap:8px; justify-content: flex-end;">
-        <button class="btn secondary" style="min-height:44px; padding:0 12px; font-size:12px;" data-action="editClient" data-id="${escapeHTML(c.id)}" title="Editar">✏️</button>
-        <button class="btn primary" style="min-height:44px; padding:0 12px; font-size:12px;" data-action="newOSForClient" data-id="${escapeHTML(c.id)}" title="Nova OS">OS+</button>
+      <div><span class="os-row-cell-label">WhatsApp</span>${escapeHTML(c.phone)}</div>
+      <div class="os-row-date"><span class="os-row-cell-label">Cadastrado</span>${formatDate(c.createdAt)}</div>
+      <div>
+        <span class="os-row-cell-label">Ordens</span>
+        <span class="count">${osCountByClient[String(c.id).replace(/\D/g, '')] || 0}</span>
+      </div>
+      <div class="os-row-action">
+        <button type="button" class="btn secondary" data-action="editClient" data-id="${escapeHTML(c.id)}" aria-label="Editar cliente">Editar</button>
+        <button type="button" class="btn primary" data-action="newOSForClient" data-id="${escapeHTML(c.id)}" aria-label="Nova OS para este cliente">Nova OS</button>
       </div>
     </div>
   `).join('');
   html += `</div>`;
+
   tbody.innerHTML = html;
   
   const osClientSelect = document.getElementById('new-os-client-select');
@@ -373,7 +403,7 @@ function renderTable() {
       tbody.innerHTML = `
         <div class="empty-state">
           <p>Nenhum resultado para "${escapeHTML(searchQuery)}"</p>
-          <button class="secondary" data-action="clearSearch">Limpar filtro</button>
+          <button type="button" class="btn secondary" data-action="clearSearch">Limpar filtro</button>
         </div>`;
     } else {
       tbody.innerHTML = `
@@ -384,48 +414,54 @@ function renderTable() {
     return;
   }
 
-  let html = `<div class="os-list-header">
-    <div>Protocolo</div><div>Cliente</div><div>Equipamento</div><div>Status</div><div>Atualização</div><div></div>
-  </div>`;
-  
-  html += `<div class="os-list">`;
-  html += paginated.map(os => `
+  let html = `<div class="os-list">
+    <div class="os-list-header">
+      <div>Protocolo</div><div>Cliente</div><div>Equipamento</div><div>Status</div><div>Atualização</div><div></div>
+    </div>`;
+
+  html += paginated.map(os => {
+    const st = STATUS.find(s => s.id === os.status);
+    return `
     <div class="os-row">
       <div class="os-row-header">
         <div class="os-row-protocol">${escapeHTML(os.protocol)}</div>
+        <span class="status-badge ${st?.cls || 'st-aberto'} os-row-status-mobile">${escapeHTML(st?.label || os.status)}</span>
       </div>
       <div class="os-row-client">
         <strong>${escapeHTML(os.client)}</strong>
-        ${os.notes ? `<span style="display:block; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📝 ${escapeHTML(os.notes)}</span>` : ''}
+        ${os.notes ? `<span>📝 ${escapeHTML(os.notes)}</span>` : ''}
       </div>
       <div class="os-row-device">
-        ${escapeHTML(os.device)}<br><small>${escapeHTML(os.model || '')}</small>
+        <span class="os-row-cell-label">Equipamento</span>
+        <strong>${escapeHTML(os.device)}</strong>
+        ${os.model ? `<small>${escapeHTML(os.model)}</small>` : ''}
       </div>
-      <div>
-        <span class="status-badge ${STATUS.find(s => s.id === os.status)?.cls || 'st-aberto'}">${escapeHTML(STATUS.find(s => s.id === os.status)?.label || os.status)}</span>
+      <div class="os-row-status-desktop">
+        <span class="status-badge ${st?.cls || 'st-aberto'}">${escapeHTML(st?.label || os.status)}</span>
       </div>
       <div class="os-row-date">
-        ${formatDate(os.updatedAt)}
+        <span class="os-row-cell-label">Atualizado</span>${formatDate(os.updatedAt)}
       </div>
       <div class="os-row-action">
-        <button type="button" aria-label="Gerenciar" data-action="openEdit" data-id="${escapeHTML(os.id)}">
-           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-           <span class="mobile-text">Gerenciar &gt;</span>
+        <button type="button" class="btn ghost icon" data-action="openEdit" data-id="${escapeHTML(os.id)}" aria-label="Gerenciar OS ${escapeHTML(os.protocol)}">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="u-icon" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+           <span class="mobile-text">Gerenciar</span>
         </button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
   html += `</div>`;
-  
+
   // Paginator
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   if (totalPages > 1) {
     html += `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; padding-top:16px; border-top:1px solid var(--line);">
-        <span class="micro" style="margin:0;">Mostrando ${startIndex + 1}-${Math.min(startIndex + ITEMS_PER_PAGE, totalItems)} de ${totalItems} ordens</span>
-        <div style="display:flex; gap:8px;">
-          <button class="secondary" style="min-height:44px; padding:0 16px;" ${currentPage === 1 ? 'disabled' : ''} data-action="changePage" data-val="-1">Anterior</button>
-          <button class="secondary" style="min-height:44px; padding:0 16px;" ${currentPage === totalPages ? 'disabled' : ''} data-action="changePage" data-val="1">Próxima</button>
+      <div class="pagination">
+        <p>Mostrando ${startIndex + 1}-${Math.min(startIndex + ITEMS_PER_PAGE, totalItems)} de ${totalItems} ordens</p>
+        <div>
+          <button type="button" class="btn secondary" ${currentPage === 1 ? 'disabled' : ''} data-action="changePage" data-val="-1">Anterior</button>
+          <button type="button" class="btn secondary" ${currentPage === totalPages ? 'disabled' : ''} data-action="changePage" data-val="1">Próxima</button>
         </div>
       </div>
     `;
@@ -515,10 +551,10 @@ const openEdit = async (id) => {
   document.getElementById('os-notes').value = '';
   
   // Status Picker Setup
-  document.getElementById('status-hidden-input').value = currentOS.status;
-  document.querySelectorAll('.status-option').forEach(btn => {
-    btn.setAttribute('aria-checked', btn.dataset.value === currentOS.status);
-  });
+  const statusSelect = document.getElementById('edit-os-status');
+  if (statusSelect) {
+    statusSelect.value = currentOS.status;
+  }
   
   const histSnap = await getDocs(query(collection(db, "os_list", currentOS.id, "history"), orderBy("date", "desc")));
   const historyList = histSnap.docs.map(d => d.data());
@@ -527,25 +563,21 @@ const openEdit = async (id) => {
   if (historyList.length > 0) {
     historyDiv.innerHTML = historyList.map(h => `
       <div class="history-item">
-        <strong style="color:var(--text);">${escapeHTML(h.action)}</strong> &nbsp;<span style="color:var(--muted)">${new Date(h.date).toLocaleString('pt-BR')}</span><br>
-        <span style="color: var(--text);">${escapeHTML(h.note)}</span>
+        <strong>${escapeHTML(h.action)}</strong> <time>${new Date(h.date).toLocaleString('pt-BR')}</time><br>
+        <span>${escapeHTML(h.note)}</span>
       </div>
     `).join('');
   } else {
-    historyDiv.innerHTML = '<span style="color:var(--muted)">Nenhum histórico registrado.</span>';
+    historyDiv.innerHTML = '<p class="micro" style="margin:0">Nenhum histórico registrado.</p>';
   }
   
   openModal('edit-modal');
 };
 
-document.querySelectorAll('.status-option').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    document.querySelectorAll('.status-option').forEach(b => b.setAttribute('aria-checked', 'false'));
-    const target = e.currentTarget;
-    target.setAttribute('aria-checked', 'true');
-    document.getElementById('status-hidden-input').value = target.dataset.value;
-  });
-});
+const statusSelect = document.getElementById('edit-os-status');
+if (statusSelect) {
+  statusSelect.innerHTML = STATUS.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+}
 
 document.getElementById('modal-whatsapp-btn').addEventListener('click', () => {
   if (!currentOS || !currentOS.phone) {
@@ -567,7 +599,7 @@ async function submitEditForm(e) {
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<div class="spinner"></div> Salvando...';
   
-  const newStatus = document.getElementById('status-hidden-input').value;
+  const newStatus = document.getElementById('edit-os-status').value;
   let newBudget = document.getElementById('os-budget').value.trim();
   newBudget = newBudget ? Number(newBudget) : null;
   const newNotes = document.getElementById('os-notes').value;
@@ -624,8 +656,8 @@ document.getElementById('cancel-os-btn')?.addEventListener('click', () => {
     <h3 style="margin-top:0;">Cancelar OS?</h3>
     <p style="color:var(--muted); margin-bottom:var(--s4);">Tem certeza que deseja cancelar esta Ordem de Serviço? Esta ação ficará no histórico.</p>
     <div style="display:flex; gap:var(--s2);">
-      <button id="cancel-no" class="secondary" style="flex:1;">Não, voltar</button>
-      <button id="cancel-yes" class="primary" style="flex:1; background:var(--danger); color:var(--danger-bg);">Sim, Cancelar</button>
+      <button type="button" id="cancel-no" class="btn secondary" style="flex:1">Não, voltar</button>
+      <button type="button" id="cancel-yes" class="btn primary" style="flex:1; background:var(--danger); border-color:var(--danger); color:#fff">Sim, Cancelar</button>
     </div>
   `;
   document.body.appendChild(cancelDialog);
@@ -641,10 +673,10 @@ document.getElementById('cancel-os-btn')?.addEventListener('click', () => {
     cancelDialog.remove();
     
     // Set status to Cancelado
-    document.querySelectorAll('.status-option').forEach(b => b.setAttribute('aria-checked', 'false'));
-    const btnCancel = document.querySelector('.status-option[data-value="Cancelado"]');
-    if (btnCancel) btnCancel.setAttribute('aria-checked', 'true');
-    document.getElementById('status-hidden-input').value = 'Cancelado';
+    const statusSelect = document.getElementById('edit-os-status');
+    if (statusSelect) {
+      statusSelect.value = 'cancelado';
+    }
     
     // Auto submit form
     await submitEditForm();
