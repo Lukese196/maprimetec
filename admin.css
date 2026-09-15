@@ -752,3 +752,98 @@ select {
   .brand-text { font-size: 13px; }
   .header-admin-inner { gap: var(--s1); }
 }
+
+/* --------------------------------------------------------------------------
+   12. Histórico de movimentações e ações destrutivas
+   -------------------------------------------------------------------------- */
+
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s2);
+  color: var(--muted);
+  font-size: var(--fs-label);
+  cursor: pointer;
+}
+.check-field input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+.history-head .field { margin: 0; }
+
+.history-section { margin-bottom: var(--s5); }
+.history-section:last-child { margin-bottom: 0; }
+.history-section h4 {
+  margin: 0;
+  font-size: var(--fs-label);
+  font-weight: 700;
+}
+.history-section-hint {
+  margin: 2px 0 var(--s3);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+.history-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+/* No modal dedicado o histórico pode crescer: quem rola é o corpo do modal. */
+#history-modal-body .history-box { max-height: none; }
+
+.btn.danger-text { color: var(--danger); }
+.btn.danger-text:hover:not(:disabled) { background: var(--danger-bg); color: var(--danger); }
+.btn.danger-solid { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+.confirm-dialog {
+  max-width: 400px;
+  padding: var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, .3);
+  margin: auto;
+}
+.confirm-dialog::backdrop { background: rgba(0, 0, 0, .5); }
+.confirm-dialog h3 { margin: 0 0 var(--s2); font-size: 18px; }
+.confirm-dialog p {
+  margin: 0 0 var(--s4);
+  color: var(--muted);
+  font-size: var(--fs-label);
+  line-height: 1.55;
+}
+.confirm-actions { display: flex; gap: var(--s2); }
+.confirm-actions .btn { flex: 1; }
+
+@media (max-width: 480px) {
+  .confirm-dialog { width: calc(100vw - var(--s5)); }
+  .confirm-actions { flex-direction: column-reverse; }
+}
+
+/* A coluna de ações agora tem dois botões. */
+.os-list-header,
+.os-row { --cols: 132px minmax(160px, 1.4fr) minmax(120px, 1fr) 158px 108px 96px; }
+
+@media (max-width: 1080px) {
+  .os-list-header,
+  .os-row { --cols: 116px minmax(130px, 1.3fr) minmax(100px, 1fr) 146px 96px 88px; }
+}
+
+@media (max-width: 860px) {
+  .os-row-action { flex-wrap: wrap; }
+}

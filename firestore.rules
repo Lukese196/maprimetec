@@ -2,24 +2,35 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Somente os dois e-mails autorizados administram o sistema.
     function isAdmin() {
       return request.auth != null
           && request.auth.token.email_verified == true
           && request.auth.token.email in ['loliver242@gmail.com', 'marcus190373@gmail.com'];
     }
 
+    // Cadastro de clientes é dado interno: nunca exposto publicamente.
     match /clients/{clientId} {
-      allow read, write: if isAdmin();          // NUNCA request.auth != null
+      allow read, write: if isAdmin();
     }
 
     match /os_list/{osId} {
-      allow get: if true;                       // consulta pública pelo protocolo (ID)
-      allow list: if isAdmin();                 // NUNCA para anônimo
-      allow update, delete: if isAdmin();       // NUNCA para anônimo
+      // O cliente consulta a própria OS pelo protocolo (que é o ID do documento),
+      // sem login. Só quem conhece o protocolo alcança o documento.
+      allow get: if true;
 
-      allow create: if request.auth != null
-        && request.resource.data.status == 'aberto'
+      // Listar todas as ordens continua restrito ao admin.
+      allow list: if isAdmin();
+
+      allow update, delete: if isAdmin();
+
+      // A triagem pública abre a OS sem login. Como não há autenticação para
+      // limitar o autor, a validação do payload é a única barreira: status
+      // inicial fixo, protocolo igual ao ID e tamanhos máximos em todo campo
+      // livre.
+      allow create: if request.resource.data.status == 'aberto'
         && request.resource.data.protocol == osId
+        && osId.matches('^OS-[0-9]{8}-[A-Z0-9]{5}$')
         && request.resource.data.keys().hasOnly([
              'protocol','client','clientCpf','phone','device','model',
              'problem','details','status','createdAt','updatedAt'
@@ -30,11 +41,34 @@ service cloud.firestore {
         && request.resource.data.client is string
         && request.resource.data.client.size() > 1
         && request.resource.data.client.size() <= 120
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 20
+        && request.resource.data.device is string
+        && request.resource.data.device.size() <= 60
+        && request.resource.data.problem is string
         && request.resource.data.problem.size() <= 2000
         && request.resource.data.clientCpf.matches('^[0-9]{11}$|^[0-9]{14}$');
 
+      // Histórico interno: notas técnicas, valores e decisões. Nunca sai do painel.
       match /history/{histId} {
         allow read, write: if isAdmin();
+      }
+
+      // Linha do tempo pública: o que o cliente vê ao consultar o protocolo.
+      // Recebe apenas o que o admin decidir publicar, além do evento de abertura.
+      match /timeline/{eventId} {
+        allow read: if true;
+
+        allow create: if isAdmin() || (
+             request.resource.data.keys().hasOnly(['date','title','detail','status'])
+          && request.resource.data.keys().hasAll(['date','title','status'])
+          && request.resource.data.status == 'aberto'
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 120
+          && (!('detail' in request.resource.data) || request.resource.data.detail.size() <= 500)
+        );
+
+        allow update, delete: if isAdmin();
       }
     }
   }

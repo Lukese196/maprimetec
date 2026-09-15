@@ -1,4 +1,4 @@
-import { db, collection, getDocs, query, SITE_CONFIG, doc, setDoc, getDoc, STATUS, auth, signInAnonymously } from './config.js';
+import { db, collection, getDocs, query, orderBy, SITE_CONFIG, doc, setDoc, getDoc, addDoc, STATUS, auth, signInAnonymously } from './config.js';
 
 const app = document.querySelector('#app');
 const themeButton = document.querySelector('#theme');
@@ -12,7 +12,13 @@ const problems = {
 let step = 0;
 const escapeHTML = value => String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
-  function isValidCpfCnpj(val) {
+function formatDateTime(v, fallback = '—') {
+  if (!v) return fallback;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? fallback : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function isValidCpfCnpj(val) {
     val = val.replace(/\D/g, '');
     if (val.length === 11) {
       if (!!val.match(/(\d)\1{10}/)) return false;
@@ -82,18 +88,34 @@ async function fetchOSData(queryVal) {
   try {
     const osRef = doc(db, 'os_list', queryVal);
     const osSnap = await getDoc(osRef);
-    if (osSnap.exists()) {
-      return [{ id: osSnap.id, ...osSnap.data() }];
-    }
-    return [];
+    if (!osSnap.exists()) return [];
+    return [{ id: osSnap.id, ...osSnap.data(), timeline: await fetchTimeline(osSnap.id) }];
   } catch (error) {
     console.error("Erro ao consultar OS:", error);
     return [];
   }
 }
 
+// Movimentacoes que o tecnico publicou para o cliente acompanhar.
+async function fetchTimeline(osId) {
+  try {
+    const snap = await getDocs(query(collection(db, 'os_list', osId, 'timeline'), orderBy('date', 'desc')));
+    return snap.docs.map(d => d.data());
+  } catch (error) {
+    console.warn('Nao foi possivel carregar o historico:', error.code);
+    return [];
+  }
+}
+
 async function criarAtendimento() {
-  await signInAnonymously(auth);
+  // O cliente nao faz login. A sessao anonima e apenas uma camada extra de
+  // rastreabilidade quando o provedor esta ativo no projeto; se estiver
+  // desativado, a abertura da OS segue pelas regras de validacao do payload.
+  try {
+    await signInAnonymously(auth);
+  } catch (error) {
+    console.warn('Sessao anonima indisponivel, seguindo sem autenticacao:', error.code);
+  }
 
   const payload = {
     client: state.name,
@@ -115,10 +137,26 @@ async function criarAtendimento() {
     const snap = await getDoc(ref);
     if (!snap.exists()) {
       await setDoc(ref, payload);
+      await registrarAbertura(protocol, payload.createdAt);
       return protocol;
     }
   }
   throw new Error("Não foi possível gerar um protocolo único. Tente novamente.");
+}
+
+// Primeiro evento da linha do tempo que o cliente ve ao consultar o protocolo.
+async function registrarAbertura(protocol, date) {
+  try {
+    await addDoc(collection(db, 'os_list', protocol, 'timeline'), {
+      date,
+      title: 'Atendimento aberto',
+      detail: 'Recebemos sua solicitacao e ela entrou na fila de triagem.',
+      status: 'aberto'
+    });
+  } catch (error) {
+    // A OS ja existe; a ausencia do evento inicial nao invalida o atendimento.
+    console.warn('Nao foi possivel registrar o evento de abertura:', error.code);
+  }
 }
 
 function updateTheme() {
@@ -240,6 +278,23 @@ function renderTrack() {
         <h4 class="budget-value">R$ ${parseFloat(osData.budget).toFixed(2).replace('.', ',')}</h4>
       </div>` : '';
 
+    const events = Array.isArray(osData.timeline) ? osData.timeline : [];
+    const historyHTML = events.length === 0 ? '' : `
+      <div class="track-history">
+        <span class="timeline-label">Histórico de movimentações</span>
+        <ol class="track-history-list">
+          ${events.map(ev => `
+            <li class="track-history-item">
+              <div class="track-history-head">
+                <strong>${escapeHTML(ev.title || 'Atualização')}</strong>
+                <time>${formatDateTime(ev.date)}</time>
+              </div>
+              ${ev.detail ? `<p>${escapeHTML(ev.detail)}</p>` : ''}
+            </li>
+          `).join('')}
+        </ol>
+      </div>`;
+
     resultDiv.innerHTML = `
       ${window.osListData && window.osListData.length > 1 ? '<button class="text-button u-mt-24" id="back-to-list-btn">← Voltar para a lista</button>' : '<div class="u-mt-32"></div>'}
       <div class="summary">
@@ -261,6 +316,7 @@ function renderTrack() {
           <span class="timeline-label">Acompanhamento</span>
           ${timelineHTML}
         </div>
+        ${historyHTML}
       </div>
     `;
     const backBtn = resultDiv.querySelector('#back-to-list-btn');

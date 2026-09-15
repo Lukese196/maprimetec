@@ -1,4 +1,4 @@
-import { db, auth, collection, getDocs, onSnapshot, doc, updateDoc, query, orderBy, addDoc, setDoc, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, STATUS, getDoc } from './config.js';
+import { db, auth, collection, getDocs, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, addDoc, setDoc, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, STATUS, getDoc } from './config.js';
 
 let currentOS = null;
 let osDataList = [];
@@ -77,6 +77,30 @@ function isValidCpfCnpj(val) {
     return true;
   }
   return false;
+}
+
+const statusLabel = id => STATUS.find(s => s.id === id)?.label || id;
+
+function formatDateTime(v, fallback = '—') {
+  if (!v) return fallback;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? fallback : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+// Registro interno: fica apenas no painel.
+async function registrarHistorico(osId, note, action = 'Atualização') {
+  if (!note) return;
+  await addDoc(collection(db, 'os_list', osId, 'history'), {
+    date: new Date().toISOString(),
+    action,
+    note
+  });
+}
+
+// Registro público: e o que o cliente enxerga ao consultar o protocolo.
+async function registrarMovimentacao(osId, { title, detail = '', status, date = new Date().toISOString() }) {
+  if (!title) return;
+  await addDoc(collection(db, 'os_list', osId, 'timeline'), { date, title, detail, status });
 }
 
 // --- Toast System ---
@@ -443,6 +467,10 @@ function renderTable() {
         <span class="os-row-cell-label">Atualizado</span>${formatDate(os.updatedAt)}
       </div>
       <div class="os-row-action">
+        <button type="button" class="btn ghost icon" data-action="openHistory" data-id="${escapeHTML(os.id)}" aria-label="Ver histórico da OS ${escapeHTML(os.protocol)}">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="u-icon" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+           <span class="mobile-text">Histórico</span>
+        </button>
         <button type="button" class="btn ghost icon" data-action="openEdit" data-id="${escapeHTML(os.id)}" aria-label="Gerenciar OS ${escapeHTML(os.protocol)}">
            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="u-icon" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
            <span class="mobile-text">Gerenciar</span>
@@ -482,6 +510,7 @@ document.addEventListener('click', (e) => {
   const action = btn.dataset.action;
   
   if (action === 'openEdit') openEdit(btn.dataset.id);
+  else if (action === 'openHistory') abrirHistorico(btn.dataset.id);
   else if (action === 'editClient') editClient(btn.dataset.id);
   else if (action === 'newOSForClient') newOSForClient(btn.dataset.id);
   else if (action === 'changePage') changePage(parseInt(btn.dataset.val));
@@ -549,6 +578,8 @@ const openEdit = async (id) => {
   
   document.getElementById('os-budget').value = currentOS.budget || '';
   document.getElementById('os-notes').value = '';
+  const sharePublic = document.getElementById('os-notes-public');
+  if (sharePublic) sharePublic.checked = false;
   
   // Status Picker Setup
   const statusSelect = document.getElementById('edit-os-status');
@@ -556,19 +587,22 @@ const openEdit = async (id) => {
     statusSelect.value = currentOS.status;
   }
   
-  const histSnap = await getDocs(query(collection(db, "os_list", currentOS.id, "history"), orderBy("date", "desc")));
-  const historyList = histSnap.docs.map(d => d.data());
-  
+  // Preview das ultimas movimentacoes; o historico completo fica no modal proprio.
   const historyDiv = document.getElementById('modal-history');
-  if (historyList.length > 0) {
-    historyDiv.innerHTML = historyList.map(h => `
-      <div class="history-item">
-        <strong>${escapeHTML(h.action)}</strong> <time>${new Date(h.date).toLocaleString('pt-BR')}</time><br>
-        <span>${escapeHTML(h.note)}</span>
-      </div>
-    `).join('');
-  } else {
-    historyDiv.innerHTML = '<p class="micro" style="margin:0">Nenhum histórico registrado.</p>';
+  historyDiv.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const histSnap = await getDocs(query(collection(db, "os_list", currentOS.id, "history"), orderBy("date", "desc")));
+    const historyList = histSnap.docs.map(d => d.data()).slice(0, 5);
+    historyDiv.innerHTML = historyList.length > 0
+      ? historyList.map(h => `
+        <div class="history-item">
+          <strong>${escapeHTML(h.action || 'Atualização')}</strong> <time>${formatDateTime(h.date)}</time><br>
+          <span>${escapeHTML(h.note)}</span>
+        </div>`).join('')
+      : '<p class="history-empty">Nenhuma movimentação registrada.</p>';
+  } catch (error) {
+    console.error('Erro ao carregar movimentações:', error);
+    historyDiv.innerHTML = '<p class="history-empty">Não foi possível carregar as movimentações.</p>';
   }
   
   openModal('edit-modal');
@@ -602,24 +636,26 @@ async function submitEditForm(e) {
   const newStatus = document.getElementById('edit-os-status').value;
   let newBudget = document.getElementById('os-budget').value.trim();
   newBudget = newBudget ? Number(newBudget) : null;
-  const newNotes = document.getElementById('os-notes').value;
+  const newNotes = document.getElementById('os-notes').value.trim();
+  const shareNote = document.getElementById('os-notes-public')?.checked;
   const newUpdatedAt = new Date().toISOString();
-  
-  let historyNote = '';
-  if (newStatus !== currentOS.status) {
-    historyNote += `Status alterado de "${currentOS.status}" para "${newStatus}". `;
+
+  const statusChanged = newStatus !== currentOS.status;
+  const budgetChanged = newBudget !== (currentOS.budget ?? null);
+
+  // Trilha interna: tudo que aconteceu, inclusive nota privada.
+  const internalParts = [];
+  if (statusChanged) internalParts.push(`Status alterado de "${statusLabel(currentOS.status)}" para "${statusLabel(newStatus)}".`);
+  if (budgetChanged) internalParts.push(newBudget === null ? 'Orçamento removido.' : `Orçamento atualizado para R$ ${newBudget.toFixed(2).replace('.', ',')}.`);
+  if (newNotes) internalParts.push(`Nota: ${newNotes}`);
+
+  if (!statusChanged && !budgetChanged && !newNotes) {
+    showToast('Nenhuma alteração para salvar.', 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = initialText;
+    return;
   }
-  if (newBudget !== currentOS.budget) {
-    if (newBudget === null) {
-      historyNote += `Orçamento removido. `;
-    } else {
-      historyNote += `Orçamento atualizado para R$ ${newBudget}. `;
-    }
-  }
-  if (newNotes.trim()) {
-    historyNote += `Nota adicionada: ${newNotes}`;
-  }
-  
+
   try {
     const osRef = doc(db, "os_list", currentOS.id);
     await updateDoc(osRef, {
@@ -627,15 +663,35 @@ async function submitEditForm(e) {
       budget: newBudget,
       updatedAt: newUpdatedAt
     });
-    
-    if (historyNote) {
-       await addDoc(collection(db, "os_list", currentOS.id, "history"), {
-         date: newUpdatedAt,
-         action: 'Atualização',
-         note: historyNote
-       });
+
+    await registrarHistorico(currentOS.id, internalParts.join(' '));
+
+    // Trilha pública: o cliente só recebe o que for relevante para ele.
+    if (statusChanged) {
+      await registrarMovimentacao(currentOS.id, {
+        title: `Status atualizado para ${statusLabel(newStatus)}`,
+        detail: shareNote && newNotes ? newNotes : '',
+        status: newStatus,
+        date: newUpdatedAt
+      });
     }
-    
+    if (budgetChanged && newBudget !== null) {
+      await registrarMovimentacao(currentOS.id, {
+        title: 'Orçamento disponível',
+        detail: `Valor de R$ ${newBudget.toFixed(2).replace('.', ',')}.`,
+        status: newStatus,
+        date: newUpdatedAt
+      });
+    }
+    if (!statusChanged && shareNote && newNotes) {
+      await registrarMovimentacao(currentOS.id, {
+        title: 'Atualização do atendimento',
+        detail: newNotes,
+        status: newStatus,
+        date: newUpdatedAt
+      });
+    }
+
     showToast("Ordem de Serviço atualizada com sucesso!");
     closeModal('edit-modal');
   } catch (error) {
@@ -648,40 +704,141 @@ async function submitEditForm(e) {
 }
 document.getElementById('edit-form').addEventListener('submit', submitEditForm);
 
-// Cancel Dialog logic
-document.getElementById('cancel-os-btn')?.addEventListener('click', () => {
-  const cancelDialog = document.createElement('dialog');
-  cancelDialog.style = "border:none; border-radius: var(--r-card); padding: var(--s4); background: var(--bg); color: var(--text); max-width: 400px; text-align:center; margin: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);";
-  cancelDialog.innerHTML = `
-    <h3 style="margin-top:0;">Cancelar OS?</h3>
-    <p style="color:var(--muted); margin-bottom:var(--s4);">Tem certeza que deseja cancelar esta Ordem de Serviço? Esta ação ficará no histórico.</p>
-    <div style="display:flex; gap:var(--s2);">
-      <button type="button" id="cancel-no" class="btn secondary" style="flex:1">Não, voltar</button>
-      <button type="button" id="cancel-yes" class="btn primary" style="flex:1; background:var(--danger); border-color:var(--danger); color:#fff">Sim, Cancelar</button>
-    </div>
-  `;
-  document.body.appendChild(cancelDialog);
-  cancelDialog.showModal();
-  
-  document.getElementById('cancel-no').onclick = () => {
-    cancelDialog.close();
-    cancelDialog.remove();
-  };
-  
-  document.getElementById('cancel-yes').onclick = async () => {
-    cancelDialog.close();
-    cancelDialog.remove();
-    
-    // Set status to Cancelado
-    const statusSelect = document.getElementById('edit-os-status');
-    if (statusSelect) {
-      statusSelect.value = 'cancelado';
-    }
-    
-    // Auto submit form
-    await submitEditForm();
-  };
+// Cancelamento: mantem a OS visivel para o cliente, marcada como cancelada.
+document.getElementById('cancel-os-btn')?.addEventListener('click', async () => {
+  if (!currentOS) return;
+  if (currentOS.status === 'cancelado') {
+    showToast('Esta OS já está cancelada.', 'error');
+    return;
+  }
+
+  const ok = await confirmarDialogo({
+    titulo: 'Cancelar esta OS?',
+    texto: `A ordem ${currentOS.protocol} passará para o status Cancelado e o cliente verá o cancelamento no histórico. A OS continua consultável.`,
+    confirmar: 'Sim, cancelar'
+  });
+  if (!ok) return;
+
+  const now = new Date().toISOString();
+  try {
+    await updateDoc(doc(db, 'os_list', currentOS.id), { status: 'cancelado', updatedAt: now });
+    await registrarHistorico(currentOS.id, `Status alterado de "${statusLabel(currentOS.status)}" para "Cancelado".`, 'Cancelamento');
+    await registrarMovimentacao(currentOS.id, {
+      title: 'Atendimento cancelado',
+      detail: 'A ordem de serviço foi cancelada. Fale conosco se precisar reabrir.',
+      status: 'cancelado',
+      date: now
+    });
+    showToast('Ordem de Serviço cancelada.');
+    closeModal('edit-modal');
+  } catch (error) {
+    console.error('Erro ao cancelar OS:', error);
+    showToast('Erro ao cancelar a OS.', 'error');
+  }
 });
+
+// --- Exclusao definitiva ---
+// Apos excluir, a consulta publica pelo protocolo passa a responder
+// "nenhum atendimento encontrado": para o cliente, a OS deixa de existir.
+async function apagarSubcolecao(osId, nome) {
+  const snap = await getDocs(collection(db, 'os_list', osId, nome));
+  await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'os_list', osId, nome, d.id))));
+}
+
+async function excluirOS(osId) {
+  await apagarSubcolecao(osId, 'history');
+  await apagarSubcolecao(osId, 'timeline');
+  await deleteDoc(doc(db, 'os_list', osId));
+}
+
+function confirmarDialogo({ titulo, texto, confirmar, perigo = true }) {
+  return new Promise(resolve => {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'confirm-dialog';
+    dlg.innerHTML = `
+      <h3>${escapeHTML(titulo)}</h3>
+      <p>${escapeHTML(texto)}</p>
+      <div class="confirm-actions">
+        <button type="button" class="btn secondary" value="no">Voltar</button>
+        <button type="button" class="btn ${perigo ? 'danger-solid' : 'primary'}" value="yes">${escapeHTML(confirmar)}</button>
+      </div>`;
+    document.body.appendChild(dlg);
+    dlg.showModal();
+    const finish = (answer) => { dlg.close(); dlg.remove(); resolve(answer); };
+    dlg.querySelector('[value="no"]').onclick = () => finish(false);
+    dlg.querySelector('[value="yes"]').onclick = () => finish(true);
+    dlg.addEventListener('cancel', (e) => { e.preventDefault(); finish(false); });
+  });
+}
+
+document.getElementById('open-history-btn')?.addEventListener('click', () => {
+  if (currentOS) abrirHistorico(currentOS.id);
+});
+
+document.getElementById('delete-os-btn')?.addEventListener('click', async () => {
+  if (!currentOS) return;
+  const ok = await confirmarDialogo({
+    titulo: 'Excluir esta OS?',
+    texto: `A ordem ${currentOS.protocol} e todo o histórico serão apagados. O cliente deixará de encontrá-la na consulta. Esta ação não pode ser desfeita.`,
+    confirmar: 'Excluir definitivamente'
+  });
+  if (!ok) return;
+
+  try {
+    await excluirOS(currentOS.id);
+    showToast(`OS ${currentOS.protocol} excluída.`);
+    closeModal('edit-modal');
+  } catch (error) {
+    console.error('Erro ao excluir OS:', error);
+    showToast('Erro ao excluir a OS.', 'error');
+  }
+});
+
+// --- Modal de historico de movimentacoes ---
+async function abrirHistorico(osId) {
+  const os = osDataList.find(o => o.id === osId);
+  if (!os) return;
+
+  document.getElementById('history-modal-protocol').textContent = os.protocol;
+  const box = document.getElementById('history-modal-body');
+  box.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Carregando histórico...</p></div>';
+  openModal('history-modal');
+
+  try {
+    const [internos, publicos] = await Promise.all([
+      getDocs(query(collection(db, 'os_list', osId, 'history'), orderBy('date', 'desc'))),
+      getDocs(query(collection(db, 'os_list', osId, 'timeline'), orderBy('date', 'desc')))
+    ]);
+
+    const bloco = (titulo, descricao, itens) => `
+      <section class="history-section">
+        <h4>${titulo}</h4>
+        <p class="history-section-hint">${descricao}</p>
+        ${itens.length === 0
+          ? '<p class="history-empty">Nenhum registro.</p>'
+          : `<div class="history-box">${itens.join('')}</div>`}
+      </section>`;
+
+    const itensInternos = internos.docs.map(d => d.data()).map(h => `
+      <div class="history-item">
+        <strong>${escapeHTML(h.action || 'Atualização')}</strong> <time>${formatDateTime(h.date)}</time><br>
+        <span>${escapeHTML(h.note)}</span>
+      </div>`);
+
+    const itensPublicos = publicos.docs.map(d => d.data()).map(h => `
+      <div class="history-item">
+        <strong>${escapeHTML(h.title)}</strong> <time>${formatDateTime(h.date)}</time>
+        ${h.detail ? `<br><span>${escapeHTML(h.detail)}</span>` : ''}
+      </div>`);
+
+    box.innerHTML =
+      bloco('Visível para o cliente', 'Aparece na consulta do protocolo.', itensPublicos) +
+      bloco('Registro interno', 'Somente o painel enxerga estas anotações.', itensInternos);
+  } catch (error) {
+    console.error('Erro ao carregar histórico:', error);
+    box.innerHTML = '<div class="empty-state"><p>Não foi possível carregar o histórico.</p></div>';
+  }
+}
 
 // Attach Close buttons
 document.querySelectorAll('[data-close]').forEach(btn => {
@@ -811,6 +968,13 @@ document.getElementById('new-os-form').addEventListener('submit', async (e) => {
       const snap = await getDoc(ref);
       if (!snap.exists()) {
         await setDoc(ref, payload);
+        await registrarHistorico(p, `OS aberta pelo painel para ${client.name}.`, 'Abertura');
+        await registrarMovimentacao(p, {
+          title: 'Atendimento aberto',
+          detail: 'Recebemos seu equipamento e a ordem de serviço foi registrada.',
+          status: 'aberto',
+          date: payload.createdAt
+        });
         finalProtocol = p;
         break;
       }

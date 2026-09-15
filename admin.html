@@ -157,17 +157,24 @@
           </div>
 
           <div class="form-group">
-            <label class="field" for="os-notes">Adicionar nota interna (opcional)</label>
+            <label class="field" for="os-notes">Adicionar nota (opcional)</label>
             <textarea id="os-notes" placeholder="Ex: Peça encomendada..."></textarea>
+            <label class="check-field" for="os-notes-public">
+              <input type="checkbox" id="os-notes-public">
+              <span>Mostrar esta nota para o cliente na consulta</span>
+            </label>
           </div>
 
           <div class="form-group">
-            <h4 class="field">Histórico</h4>
+            <div class="history-head">
+              <h4 class="field">Últimas movimentações</h4>
+              <button type="button" class="btn ghost" id="open-history-btn">Ver histórico completo</button>
+            </div>
             <div id="modal-history" class="history-box"></div>
           </div>
 
           <div class="modal-actions">
-            <button type="button" class="btn secondary" data-close="edit-modal">Voltar</button>
+            <button type="button" class="btn ghost danger-text" id="delete-os-btn">Excluir OS</button>
             <div class="group">
               <button type="button" class="btn danger" id="cancel-os-btn">Cancelar OS</button>
               <button type="submit" class="btn primary">Salvar alterações</button>
@@ -273,6 +280,17 @@
           </div>
         </form>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: histórico de movimentações -->
+  <div id="history-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="history-modal-title">
+      <div class="modal-header">
+        <h3 id="history-modal-title">Histórico <span id="history-modal-protocol" style="color:var(--accent)"></span></h3>
+        <button type="button" class="btn ghost icon" data-close="history-modal" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body" id="history-modal-body"></div>
     </div>
   </div>
 

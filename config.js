@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, getDocs, onSnapshot, doc, updateDoc, query, orderBy, setDoc, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check.js";
 
@@ -44,6 +44,6 @@ export const STATUS = [
 
 export { 
   db, auth, collection, getDocs, doc, getDoc, onSnapshot, 
-  updateDoc, query, orderBy, setDoc, addDoc, onAuthStateChanged, signOut, 
+  updateDoc, deleteDoc, query, orderBy, setDoc, addDoc, onAuthStateChanged, signOut, 
   GoogleAuthProvider, signInWithPopup, signInAnonymously, SITE_CONFIG 
 };

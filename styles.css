@@ -496,3 +496,60 @@ form {
     padding-bottom: var(--s7);
   }
 }
+
+/* Histórico de movimentações exibido ao cliente na consulta do protocolo */
+.track-history {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--line);
+}
+
+.track-history-list {
+  list-style: none;
+  margin: var(--s3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.track-history-item {
+  position: relative;
+  padding-left: var(--s4);
+  border-left: 2px solid var(--line);
+}
+.track-history-item:first-child { border-left-color: var(--accent); }
+.track-history-item::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line);
+}
+.track-history-item:first-child::before { background: var(--accent); }
+
+.track-history-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+.track-history-head strong {
+  font-size: var(--fs-label);
+  line-height: 1.4;
+}
+.track-history-head time {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  white-space: nowrap;
+}
+.track-history-item p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
