@@ -1,4 +1,6 @@
-import { db, collection, getDocs, query, orderBy, SITE_CONFIG, doc, setDoc, getDoc, addDoc, STATUS, auth, signInAnonymously } from './config.js';
+// O site publico so LE do Firestore: a consulta da OS pelo protocolo e o
+// historico que o atendente publicou. Nenhuma escrita parte daqui.
+import { db, collection, getDocs, query, orderBy, SITE_CONFIG, doc, getDoc, STATUS } from './config.js';
 
 const app = document.querySelector('#app');
 const themeButton = document.querySelector('#theme');
@@ -107,58 +109,6 @@ async function fetchTimeline(osId) {
   }
 }
 
-async function criarAtendimento() {
-  // O cliente nao faz login. A sessao anonima e apenas uma camada extra de
-  // rastreabilidade quando o provedor esta ativo no projeto; se estiver
-  // desativado, a abertura da OS segue pelas regras de validacao do payload.
-  try {
-    await signInAnonymously(auth);
-  } catch (error) {
-    console.warn('Sessao anonima indisponivel, seguindo sem autenticacao:', error.code);
-  }
-
-  const payload = {
-    client: state.name,
-    phone: state.phone,
-    clientCpf: state.cpf.replace(/\D/g, ''),
-    device: state.device,
-    model: state.model,
-    problem: state.problem,
-    details: state.details,
-    status: 'aberto',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  for (let i = 0; i < 3; i++) {
-    const protocol = generateSafeProtocol();
-    payload.protocol = protocol;
-    const ref = doc(db, 'os_list', protocol);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      await setDoc(ref, payload);
-      await registrarAbertura(protocol, payload.createdAt);
-      return protocol;
-    }
-  }
-  throw new Error("Não foi possível gerar um protocolo único. Tente novamente.");
-}
-
-// Primeiro evento da linha do tempo que o cliente ve ao consultar o protocolo.
-async function registrarAbertura(protocol, date) {
-  try {
-    await addDoc(collection(db, 'os_list', protocol, 'timeline'), {
-      date,
-      title: 'Atendimento aberto',
-      detail: 'Recebemos sua solicitacao e ela entrou na fila de triagem.',
-      status: 'aberto'
-    });
-  } catch (error) {
-    // A OS ja existe; a ausencia do evento inicial nao invalida o atendimento.
-    console.warn('Nao foi possivel registrar o evento de abertura:', error.code);
-  }
-}
-
 function updateTheme() {
   const dark = document.documentElement.dataset.theme === 'dark';
   themeButton.textContent = dark ? '☀' : '☾';
@@ -179,8 +129,17 @@ function choices(items, key) {
   return `<div class="options" role="radiogroup" aria-label="${key === 'device' ? 'Equipamento' : 'Problema'}">${items.map((item, i) => `<button type="button" class="option" role="radio" aria-checked="${state[key] === item}" data-choice="${escapeHTML(item)}" data-key="${key}"><span>${item}</span></button>`).join('')}</div>`;
 }
 
-function summaryText(protocol) {
-  return `Olá! Sou ${state.name} e gostaria de atendimento.\nProtocolo: ${protocol}\n\nEquipamento: ${state.device}\nProblema: ${state.problem}${state.model ? `\nMarca/modelo: ${state.model}` : ''}${state.details ? `\nDetalhes: ${state.details}` : ''}\n\nPodem me ajudar?`;
+function summaryText() {
+  return `Olá! Sou ${state.name} e gostaria de atendimento.
+CPF/CNPJ: ${state.cpf}
+WhatsApp: ${state.phone}
+
+Equipamento: ${state.device}
+Problema: ${state.problem}${state.model ? `
+Marca/modelo: ${state.model}` : ''}${state.details ? `
+Detalhes: ${state.details}` : ''}
+
+Podem me ajudar?`;
 }
 
 function renderTrack() {
@@ -481,75 +440,34 @@ function render() {
       input.setCustomValidity(''); 
     }));
     
-    let isSubmitting = false;
-    
-    const handleSubmission = async (btnElement, successCallback) => {
-      if (isSubmitting) return;
+    // A triagem NAO cria Ordem de Servico. Ela monta o resumo e abre a conversa
+    // no WhatsApp; quem registra a OS e informa o protocolo ao cliente e o
+    // atendente, pelo painel. Por isso o site publico nao grava nada no banco.
+    app.querySelector('#whatsapp-btn')?.addEventListener('click', () => {
+      window.open(`https://wa.me/${number}?text=${encodeURIComponent(summaryText())}`, '_blank');
 
-      if (state.generatedProtocol) {
-        successCallback(state.generatedProtocol);
-        return;
-      }
-
-      isSubmitting = true;
-      const status = document.querySelector('#status');
-      
-      const allBtns = app.querySelectorAll('.actions button');
-      allBtns.forEach(b => b.disabled = true);
-      const originalText = btnElement.textContent;
-      btnElement.textContent = 'Gerando OS...';
-      status.textContent = '';
-      
-      try {
-        const protocol = await criarAtendimento();
-        state.generatedProtocol = protocol;
-        successCallback(protocol);
-      } catch (error) {
-        console.error("Erro no processo de criação:", error);
-        status.textContent = error.message || 'Erro ao gerar OS. Tente novamente.';
-        status.style.color = 'var(--danger)';
-        allBtns.forEach(b => b.disabled = false);
-        btnElement.textContent = originalText;
-        isSubmitting = false;
-      }
-    };
-
-    // Final WhatsApp Action
-    app.querySelector('#whatsapp-btn')?.addEventListener('click', (e) => {
-      handleSubmission(e.currentTarget, (protocol) => {
-        const text = summaryText(protocol);
-        window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, '_blank');
-        
-        app.querySelector('.wizard').innerHTML = `
-          <div class="u-text-center u-py-40">
-            <h2 class="u-text-ok u-mb-8">Protocolo Gerado!</h2>
-            <p class="u-fw-bold u-mb-20" style="font-size: var(--fs-display);">${escapeHTML(protocol)}</p>
-            <p class="subtitle">Anote este número. Você pode usá-lo para acompanhar o status do seu serviço na página inicial.</p>
-            <div class="actions">
-              <button class="primary" onclick="location.hash=''; location.reload();">Voltar ao Início</button>
-            </div>
+      app.querySelector('.wizard').innerHTML = `
+        <div class="u-text-center u-py-40">
+          <h2 class="u-text-ok u-mb-8">Resumo enviado!</h2>
+          <p class="subtitle">Abrimos a conversa no WhatsApp com o seu resumo. Assim que o atendimento for registrado, você recebe o número de protocolo para acompanhar o serviço aqui pelo site.</p>
+          <div class="actions">
+            <button class="primary" onclick="location.hash=''; location.reload();">Voltar ao Início</button>
           </div>
-        `;
-      });
+        </div>
+      `;
     });
 
-    app.querySelector('#copy')?.addEventListener('click', (e) => {
-      handleSubmission(e.currentTarget, async (protocol) => {
-        const status = document.querySelector('#status');
-        try { 
-          await navigator.clipboard.writeText(summaryText(protocol)); 
-          status.textContent = `Resumo copiado (Protocolo: ${escapeHTML(protocol)}). Cole na conversa.`; 
-          status.style.color = 'var(--ok)'; 
-        }
-        catch { 
-          status.textContent = `Protocolo ${escapeHTML(protocol)} gerado, mas falhamos ao copiar.`; 
-          status.style.color = 'var(--danger)';
-        }
-        const allBtns = app.querySelectorAll('.actions button');
-        allBtns.forEach(b => b.disabled = false);
+    app.querySelector('#copy')?.addEventListener('click', async (e) => {
+      const status = document.querySelector('#status');
+      try {
+        await navigator.clipboard.writeText(summaryText());
+        status.textContent = 'Resumo copiado. Cole na conversa do WhatsApp.';
+        status.style.color = 'var(--ok)';
         e.currentTarget.textContent = 'Copiar resumo novamente';
-        isSubmitting = false;
-      });
+      } catch {
+        status.textContent = 'Não foi possível copiar o resumo automaticamente.';
+        status.style.color = 'var(--danger)';
+      }
     });
   }
   

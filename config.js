@@ -19,7 +19,17 @@ const auth = getAuth(app);
 
 const SITE_CONFIG = {
   whatsappNumber: '5511999999999', // Coloque aqui o número real do WhatsApp (55 + DDD + Numero)
-  appCheckSiteKey: '' // Passo: Vá ao Console do reCAPTCHA v3, gere uma chave (não enterprise) para maprimetec-os.web.app e cole aqui.
+  // Chave de site do reCAPTCHA v3 (pública por natureza: fica visível no código
+  // do cliente). A chave secreta correspondente NÃO vem para cá — ela é
+  // cadastrada apenas no Firebase Console, em App Check > Apps.
+  // Chave de site do reCAPTCHA (publica: fica visivel no codigo do cliente).
+  // Vazia de proposito: o App Check so entra em acao depois que o app estiver
+  // registrado no Firebase Console. Registrar exige o provedor reCAPTCHA
+  // Enterprise (o provedor classico foi descontinuado e o campo esta
+  // desabilitado no console), e o Enterprise exige faturamento ativo no
+  // projeto. A chave ja existe e esta pronta para uso:
+  // 6LcBob0tAAAAAOLtZhwnBZmiRORsNpqNLLOhGJMr
+  appCheckSiteKey: ''
 };
 
 if (SITE_CONFIG.appCheckSiteKey) {
