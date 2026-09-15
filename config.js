@@ -18,10 +18,9 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 const SITE_CONFIG = {
-  whatsappNumber: '5511999999999', // Coloque aqui o número real do WhatsApp (55 + DDD + Numero)
-  // Chave de site do reCAPTCHA v3 (pública por natureza: fica visível no código
-  // do cliente). A chave secreta correspondente NÃO vem para cá — ela é
-  // cadastrada apenas no Firebase Console, em App Check > Apps.
+  // WhatsApp comercial: codigo do pais + DDD + numero, somente digitos.
+  // +55 21 96549-0091
+  whatsappNumber: '5521965490091',
   // Chave de site do reCAPTCHA (publica: fica visivel no codigo do cliente).
   // Vazia de proposito: o App Check so entra em acao depois que o app estiver
   // registrado no Firebase Console. Registrar exige o provedor reCAPTCHA
