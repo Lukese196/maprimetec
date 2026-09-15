@@ -87,9 +87,9 @@
           <!-- Filters -->
           <div style="display:flex; gap:var(--s2); overflow-x:auto; padding-bottom:var(--s1); scrollbar-width:none;">
             <button class="filter-btn" aria-pressed="true" data-filter="all">Todas <span class="count">0</span></button>
-            <button class="filter-btn" aria-pressed="false" data-filter="Aberto">Abertas <span class="count">0</span></button>
-            <button class="filter-btn" aria-pressed="false" data-filter="Em Reparo">Em Reparo <span class="count">0</span></button>
-            <button class="filter-btn" aria-pressed="false" data-filter="Finalizado">Finalizadas <span class="count">0</span></button>
+            <button class="filter-btn" aria-pressed="false" data-filter="aberto">Abertas <span class="count">0</span></button>
+            <button class="filter-btn" aria-pressed="false" data-filter="reparo">Em Reparo <span class="count">0</span></button>
+            <button class="filter-btn" aria-pressed="false" data-filter="finalizado">Finalizadas <span class="count">0</span></button>
           </div>
         </div>
 
@@ -156,11 +156,11 @@
             <label class="field" style="margin-bottom:var(--s2); font-weight:600;">Status da ordem</label>
             <input type="hidden" id="status-hidden-input" name="status">
             <div class="status-picker">
-              <button type="button" class="status-option" data-value="Aberto" aria-checked="false">Aberto</button>
-              <button type="button" class="status-option" data-value="Em Análise" aria-checked="false">Em Análise</button>
-              <button type="button" class="status-option" data-value="Orçamento Enviado" aria-checked="false">Orçamento</button>
-              <button type="button" class="status-option" data-value="Em Reparo" aria-checked="false">Em Reparo</button>
-              <button type="button" class="status-option" data-value="Finalizado" aria-checked="false">Finalizado</button>
+              <button type="button" class="status-option" data-value="aberto" aria-checked="false">Aberto</button>
+              <button type="button" class="status-option" data-value="analise" aria-checked="false">Em Análise</button>
+              <button type="button" class="status-option" data-value="orcamento" aria-checked="false">Orçamento</button>
+              <button type="button" class="status-option" data-value="reparo" aria-checked="false">Em Reparo</button>
+              <button type="button" class="status-option" data-value="finalizado" aria-checked="false">Finalizado</button>
             </div>
           </div>
           

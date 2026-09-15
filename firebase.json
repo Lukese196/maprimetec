@@ -3,6 +3,10 @@
     "public": ".",
     "ignore": [
       "firebase.json",
+      "firestore.rules",
+      "scripts/**",
+      "*.md",
+      "serviceAccountKey.json",
       "**/.*",
       "**/node_modules/**",
       ".tools/**",

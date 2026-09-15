@@ -1,8 +1,8 @@
-import { db, collection, addDoc, getDocs, query, where } from './config.js';
+import { db, collection, getDocs, query, SITE_CONFIG, doc, setDoc, getDoc, STATUS, auth, signInAnonymously } from './config.js';
 
 const app = document.querySelector('#app');
 const themeButton = document.querySelector('#theme');
-const state = { device: '', problem: '', model: '', details: '', name: '', phone: '' };
+const state = { device: '', problem: '', model: '', details: '', name: '', phone: '', cpf: '' };
 const devices = ['Notebook', 'Computador', 'Impressora', 'Outro equipamento'];
 const problems = {
   computer: ['Não liga', 'Está lento ou travando', 'Problema na tela', 'Internet ou Wi-Fi', 'Quero fazer uma melhoria', 'Outro problema', 'Não sei explicar'],
@@ -10,50 +10,88 @@ const problems = {
   other: ['Não liga', 'Não funciona como deveria', 'Outro problema', 'Não sei explicar']
 };
 let step = 0;
-const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+const escapeHTML = value => String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
-async function saveClient(clientData) {
+function isValidCpf(cpf) {
+  cpf = cpf.replace(/\D/g, '');
+  if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false;
+  let sum = 0, rest;
+  for (let i = 1; i <= 9; i++) sum = sum + parseInt(cpf.substring(i-1, i)) * (11 - i);
+  rest = (sum * 10) % 11;
+  if ((rest === 10) || (rest === 11)) rest = 0;
+  if (rest !== parseInt(cpf.substring(9, 10))) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum = sum + parseInt(cpf.substring(i-1, i)) * (12 - i);
+  rest = (sum * 10) % 11;
+  if ((rest === 10) || (rest === 11)) rest = 0;
+  return rest === parseInt(cpf.substring(10, 11));
+}
+
+function formatDate(v, fallback = '—') {
+  if (!v) return fallback;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? fallback : d.toLocaleDateString('pt-BR');
+}
+
+function generateSafeProtocol() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  
+  const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const array = new Uint8Array(5);
+  crypto.getRandomValues(array);
+  
+  let random = '';
+  for (let i = 0; i < 5; i++) {
+    random += ALPHABET[array[i] % ALPHABET.length];
+  }
+  
+  return `OS-${yyyy}${mm}${dd}-${random}`;
+}
+
+async function fetchOSData(queryVal) {
   try {
-    const q = query(collection(db, "clients"), where("phone", "==", clientData.phone));
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      await addDoc(collection(db, "clients"), clientData);
+    const osRef = doc(db, 'os_list', queryVal);
+    const osSnap = await getDoc(osRef);
+    if (osSnap.exists()) {
+      return [{ id: osSnap.id, ...osSnap.data() }];
     }
-  } catch (e) {
-    console.error("Error saving client: ", e);
+    return [];
+  } catch (error) {
+    console.error("Erro ao consultar OS:", error);
+    return [];
   }
 }
 
-async function saveOS(osData) {
-  try {
-    const docRef = await addDoc(collection(db, "os_list"), osData);
-    console.log("Document written with ID: ", docRef.id);
-  } catch (e) {
-    console.error("Error adding document: ", e);
+async function criarAtendimento() {
+  await signInAnonymously(auth);
+
+  const payload = {
+    client: state.name,
+    phone: state.phone,
+    clientCpf: state.cpf.replace(/\D/g, ''),
+    device: state.device,
+    model: state.model,
+    problem: state.problem,
+    details: state.details,
+    status: 'aberto',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  for (let i = 0; i < 3; i++) {
+    const protocol = generateSafeProtocol();
+    payload.protocol = protocol;
+    const ref = doc(db, 'os_list', protocol);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, payload);
+      return protocol;
+    }
   }
-}
-
-async function getOS(protocol) {
-  const q = query(collection(db, "os_list"), where("protocol", "==", protocol));
-  const querySnapshot = await getDocs(q);
-  if (!querySnapshot.empty) {
-    return querySnapshot.docs[0].data();
-  }
-  return null;
-}
-
-async function getOSsByCPF(cpf) {
-  const q = query(collection(db, "os_list"), where("clientCpf", "==", cpf));
-  const querySnapshot = await getDocs(q);
-  const results = [];
-  querySnapshot.forEach(doc => {
-    results.push(doc.data());
-  });
-  return results;
-}
-
-function generateProtocol() {
-  return 'OS-' + Math.floor(1000 + Math.random() * 9000);
+  throw new Error("Não foi possível gerar um protocolo único. Tente novamente.");
 }
 
 function updateTheme() {
@@ -87,10 +125,10 @@ function renderTrack() {
         <button class="text-button" data-next="0">← Voltar</button>
       </div>
       <h2>Acompanhar atendimento</h2>
-      <p class="subtitle">Digite o número do seu Protocolo (Ex: OS-1234) ou CPF para ver o status do seu aparelho.</p>
+      <p class="subtitle">Digite o número do seu Protocolo (Ex: OS-1234) para ver o status do seu aparelho.</p>
       <form id="track-form" class="u-flex-col">
-        <label class="field" for="protocol">Protocolo ou CPF</label>
-        <input type="text" id="protocol" placeholder="OS-1234 ou 000.000.000-00" required oninput="this.value = this.value.toUpperCase()">
+        <label class="field" for="protocol">Protocolo</label>
+        <input type="text" id="protocol" placeholder="OS-1234" required oninput="this.value = this.value.toUpperCase()">
         <div class="actions">
           <button class="primary u-w-full" type="submit" id="track-btn">Consultar Status</button>
         </div>
@@ -110,16 +148,7 @@ function renderTrack() {
     trackBtn.textContent = 'Consultando...';
     resultDiv.innerHTML = `<div class="u-text-center u-p-16"><div class="spinner u-w-32 u-h-32 u-mx-auto"></div></div>`;
     
-    const isCpf = /^[0-9.-]{11,14}$/.test(queryVal);
-    
-    let osList = [];
-    if (isCpf) {
-      const cpfDigits = queryVal.replace(/\D/g, '');
-      osList = await getOSsByCPF(cpfDigits);
-    } else {
-      const osData = await getOS(queryVal);
-      if (osData) osList = [osData];
-    }
+    let osList = await fetchOSData(queryVal);
     
     trackBtn.disabled = false;
     trackBtn.textContent = 'Consultar Status';
@@ -134,43 +163,46 @@ function renderTrack() {
     } else {
       resultDiv.innerHTML = `
         <h3 class="u-mb-16 u-mt-32">Atendimentos encontrados</h3>
-        <div class="u-flex-col u-gap-10">
+        <div class="u-flex-col u-gap-10" id="os-results-list">
           ${osList.map((os, i) => `
-            <div class="u-border-line u-bg-surface u-radius-card u-p-16 u-cursor-pointer u-flex u-justify-between u-align-center" onclick="window.showOSDetails(${i})">
+            <div class="u-border-line u-bg-surface u-radius-card u-p-16 u-cursor-pointer u-flex u-justify-between u-align-center" data-index="${i}">
               <div>
-                <strong class="os-card-title">${os.protocol}</strong>
-                <p class="os-card-subtitle">${os.device}</p>
+                <strong class="os-card-title">${escapeHTML(os.protocol)}</strong>
+                <p class="os-card-subtitle">${escapeHTML(os.device)}</p>
               </div>
               <div class="u-text-right">
-                <span class="os-card-status">${os.status}</span>
+                <span class="os-card-status ${escapeHTML(STATUS.find(s => s.id === os.status)?.cls || '')}">${escapeHTML(STATUS.find(s => s.id === os.status)?.label || os.status)}</span>
               </div>
             </div>
           `).join('')}
         </div>
       `;
       window.osListData = osList;
-      window.showOSDetails = (index) => {
-        renderOSDetails(window.osListData[index], resultDiv);
-      };
+      document.getElementById('os-results-list').addEventListener('click', (ev) => {
+        const card = ev.target.closest('[data-index]');
+        if (card) {
+           renderOSDetails(window.osListData[card.dataset.index], resultDiv);
+        }
+      });
     }
   });
 
   function renderOSDetails(osData, resultDiv) {
-    const timelineSteps = ['Aberto', 'Em Análise', 'Orçamento Enviado', 'Em Reparo', 'Finalizado'];
-    const isCancelled = osData.status === 'Cancelado';
-    const currentIndex = timelineSteps.indexOf(osData.status);
+    const timelineSteps = STATUS.filter(s => s.id !== 'cancelado');
+    const isCancelled = osData.status === 'cancelado';
+    const currentIndex = timelineSteps.findIndex(s => s.id === osData.status);
 
     const timelineHTML = isCancelled ? 
       `<div class="u-text-center u-p-16 u-text-danger u-fw-bold">Atendimento Cancelado</div>` :
       `<div class="timeline">
         <div class="timeline-bg"></div>
         <div class="timeline-fill" style="width: ${currentIndex > 0 ? (currentIndex / (timelineSteps.length - 1)) * 100 : 0}%"></div>
-        ${timelineSteps.map((stepName, idx) => `
+        ${timelineSteps.map((step, idx) => `
           <div class="timeline-step">
             <div class="timeline-icon ${idx <= currentIndex ? (idx === timelineSteps.length - 1 ? 'done' : 'active') : 'pending'}">
               ${idx < currentIndex || (idx === currentIndex && idx === timelineSteps.length - 1) ? '✓' : ''}
             </div>
-            <span class="timeline-text ${idx === currentIndex ? 'active' : 'pending'}">${stepName}</span>
+            <span class="timeline-text ${idx === currentIndex ? 'active' : 'pending'}">${escapeHTML(step.label)}</span>
           </div>
         `).join('')}
       </div>`;
@@ -182,20 +214,20 @@ function renderTrack() {
       </div>` : '';
 
     resultDiv.innerHTML = `
-      ${window.osListData && window.osListData.length > 1 ? '<button class="text-button u-mt-24" onclick="document.querySelector(\'#track-form\').dispatchEvent(new Event(\'submit\'))">← Voltar para a lista</button>' : '<div class="u-mt-32"></div>'}
+      ${window.osListData && window.osListData.length > 1 ? '<button class="text-button u-mt-24" id="back-to-list-btn">← Voltar para a lista</button>' : '<div class="u-mt-32"></div>'}
       <div class="summary">
         <div class="summary-header">
           <div>
             <span class="summary-header-label">Protocolo</span>
-            <h3 class="summary-header-title">${osData.protocol}</h3>
+            <h3 class="summary-header-title">${escapeHTML(osData.protocol)}</h3>
           </div>
           <div class="summary-header-meta">
              <span>Última atualização</span>
-             <div>${new Date(osData.updatedAt).toLocaleDateString('pt-BR')}</div>
+             <div>${formatDate(osData.updatedAt)}</div>
           </div>
         </div>
         
-        <p class="u-mt-16"><strong>Equipamento:</strong> ${osData.device} - ${osData.problem}</p>
+        <p class="u-mt-16"><strong>Equipamento:</strong> ${escapeHTML(osData.device)} - ${escapeHTML(osData.problem)}</p>
         ${budgetHTML}
         
         <div class="timeline-container">
@@ -204,6 +236,13 @@ function renderTrack() {
         </div>
       </div>
     `;
+    const backBtn = resultDiv.querySelector('#back-to-list-btn');
+    if (backBtn) {
+       backBtn.addEventListener('click', () => {
+         const btn = document.querySelector('#track-btn');
+         if(btn) btn.click();
+       });
+    }
   }
 
   app.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', () => {
@@ -256,9 +295,9 @@ function render() {
     if (step === 1) content = choices(devices, 'device');
     if (step === 2) content = choices(problems[state.device === 'Impressora' ? 'printer' : state.device === 'Outro equipamento' ? 'other' : 'computer'], 'problem');
     if (step === 3) content = `<label class="field" for="model">Marca e modelo <small>· opcional</small></label><input id="model" name="model" maxlength="100" value="${escapeHTML(state.model)}" placeholder="Ex.: Dell Inspiron 15"><label class="field" for="details">O que mais você percebeu? <small>· opcional</small></label><textarea id="details" name="details" maxlength="600" placeholder="Quando começou? Aparece alguma mensagem?">${escapeHTML(state.details)}</textarea><p class="micro">Não inclua senhas ou outras informações sensíveis.</p>`;
-    if (step === 4) content = `<label class="field" for="name">Seu nome</label><input id="name" name="name" autocomplete="name" maxlength="80" required value="${escapeHTML(state.name)}" placeholder="Como você prefere ser chamado?"><label class="field" for="phone">Seu WhatsApp</label><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required value="${escapeHTML(state.phone)}" placeholder="(00) 00000-0000"><p class="micro">Usaremos este número apenas para enviar atualizações sobre o seu aparelho.</p><input type="text" id="bot_field" name="bot_field" class="u-hidden" tabindex="-1" autocomplete="off">`;
+    if (step === 4) content = `<label class="field" for="name">Seu nome</label><input id="name" name="name" autocomplete="name" maxlength="80" required value="${escapeHTML(state.name)}" placeholder="Como você prefere ser chamado?"><label class="field" for="cpf">Seu CPF</label><input id="cpf" name="cpf" type="text" inputmode="numeric" required value="${escapeHTML(state.cpf)}" placeholder="000.000.000-00"><label class="field" for="phone">Seu WhatsApp</label><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required value="${escapeHTML(state.phone)}" placeholder="(00) 00000-0000"><p class="micro">Usaremos este número apenas para enviar atualizações sobre o seu aparelho.</p><input type="text" id="bot_field" name="bot_field" class="u-hidden" tabindex="-1" autocomplete="off">`;
     if (step === 5) {
-      const rows = [['Nome', state.name], ['WhatsApp', state.phone], ['Equipamento', state.device], ['Problema', state.problem], ['Marca e modelo', state.model || 'Não informado'], ['Detalhes', state.details || 'Nenhum detalhe adicional']];
+      const rows = [['Nome', state.name], ['CPF', state.cpf], ['WhatsApp', state.phone], ['Equipamento', state.device], ['Problema', state.problem], ['Marca e modelo', state.model || 'Não informado'], ['Detalhes', state.details || 'Nenhum detalhe adicional']];
       content = `<div class="summary">
         <div class="summary-header">
           <h3 class="summary-header-title" style="font-size: var(--fs-body);">Resumo do atendimento</h3>
@@ -270,7 +309,7 @@ function render() {
       </div>`;
     }
     
-    const number = window.SITE_CONFIG?.whatsappNumber || '';
+    const number = SITE_CONFIG?.whatsappNumber || '';
     const configured = /^[1-9]\d{9,14}$/.test(number);
     
     const noticeBoxForStep5 = step === 5 ? (configured 
@@ -315,6 +354,11 @@ function render() {
             document.querySelector('#name').reportValidity(); 
             return; 
           }
+          if (!isValidCpf(state.cpf)) {
+            document.querySelector('#cpf').setCustomValidity('CPF inválido.');
+            document.querySelector('#cpf').reportValidity();
+            return;
+          }
           if (!state.phone.trim()) {
             document.querySelector('#phone').setCustomValidity('Digite seu WhatsApp para continuar.');
             document.querySelector('#phone').reportValidity();
@@ -334,56 +378,87 @@ function render() {
         if (v.length > 10) v = `${v.slice(0,10)}-${v.slice(10)}`;
         input.value = v;
       }
+      if (input.name === 'cpf') {
+        let v = input.value.replace(/\D/g, '');
+        if (v.length > 11) v = v.slice(0, 11);
+        if (v.length > 3) v = `${v.slice(0,3)}.${v.slice(3)}`;
+        if (v.length > 7) v = `${v.slice(0,7)}.${v.slice(7)}`;
+        if (v.length > 11) v = `${v.slice(0,11)}-${v.slice(11)}`;
+        input.value = v;
+      }
       state[input.name] = input.value; 
       input.setCustomValidity(''); 
     }));
     
-    // Final WhatsApp Action
-    app.querySelector('#whatsapp-btn')?.addEventListener('click', async () => {
-      // Create OS
-      const protocol = generateProtocol();
-      const osData = {
-        protocol, client: state.name, phone: state.phone, device: state.device, model: state.model, problem: state.problem,
-        details: state.details, status: 'Aberto', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-        history: [{ date: new Date().toISOString(), action: 'OS Criada', note: 'OS gerada pelo site público.' }]
-      };
-      await saveClient({ name: state.name, phone: state.phone, createdAt: new Date().toISOString() });
-      await saveOS(osData);
+    let isSubmitting = false;
+    
+    const handleSubmission = async (btnElement, successCallback) => {
+      if (isSubmitting) return;
 
-      const text = summaryText(protocol);
-      window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, '_blank');
+      if (state.generatedProtocol) {
+        successCallback(state.generatedProtocol);
+        return;
+      }
+
+      isSubmitting = true;
+      const status = document.querySelector('#status');
       
-      app.querySelector('.wizard').innerHTML = `
-        <div class="u-text-center u-py-40">
-          <h2 class="u-text-ok u-mb-8">Protocolo Gerado!</h2>
-          <p class="u-fw-bold u-mb-20" style="font-size: var(--fs-display);">${protocol}</p>
-          <p class="subtitle">Anote este número. Você pode usá-lo para acompanhar o status do seu serviço na página inicial.</p>
-          <div class="actions">
-            <button class="primary" onclick="location.hash=''; location.reload();">Voltar ao Início</button>
+      const allBtns = app.querySelectorAll('.actions button');
+      allBtns.forEach(b => b.disabled = true);
+      const originalText = btnElement.textContent;
+      btnElement.textContent = 'Gerando OS...';
+      status.textContent = '';
+      
+      try {
+        const protocol = await criarAtendimento();
+        state.generatedProtocol = protocol;
+        successCallback(protocol);
+      } catch (error) {
+        console.error("Erro no processo de criação:", error);
+        status.textContent = error.message || 'Erro ao gerar OS. Tente novamente.';
+        status.style.color = 'var(--danger)';
+        allBtns.forEach(b => b.disabled = false);
+        btnElement.textContent = originalText;
+        isSubmitting = false;
+      }
+    };
+
+    // Final WhatsApp Action
+    app.querySelector('#whatsapp-btn')?.addEventListener('click', (e) => {
+      handleSubmission(e.currentTarget, (protocol) => {
+        const text = summaryText(protocol);
+        window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, '_blank');
+        
+        app.querySelector('.wizard').innerHTML = `
+          <div class="u-text-center u-py-40">
+            <h2 class="u-text-ok u-mb-8">Protocolo Gerado!</h2>
+            <p class="u-fw-bold u-mb-20" style="font-size: var(--fs-display);">${escapeHTML(protocol)}</p>
+            <p class="subtitle">Anote este número. Você pode usá-lo para acompanhar o status do seu serviço na página inicial.</p>
+            <div class="actions">
+              <button class="primary" onclick="location.hash=''; location.reload();">Voltar ao Início</button>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      });
     });
 
-    app.querySelector('#copy')?.addEventListener('click', async () => {
-      const status = document.querySelector('#status');
-      const protocol = generateProtocol();
-      const osData = {
-        protocol, client: state.name, phone: state.phone, device: state.device, model: state.model, problem: state.problem,
-        details: state.details, status: 'Aberto', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-        history: [{ date: new Date().toISOString(), action: 'OS Criada', note: 'OS gerada pelo site público.' }]
-      };
-      await saveClient({ name: state.name, phone: state.phone, createdAt: new Date().toISOString() });
-      await saveOS(osData);
-      try { 
-        await navigator.clipboard.writeText(summaryText(protocol)); 
-        status.textContent = `Resumo copiado (Protocolo: ${protocol}). Cole na conversa.`; 
-        status.style.color = 'var(--ok)'; 
-      }
-      catch { 
-        status.textContent = 'Não foi possível copiar automaticamente.'; 
-        status.style.color = 'var(--danger)';
-      }
+    app.querySelector('#copy')?.addEventListener('click', (e) => {
+      handleSubmission(e.currentTarget, async (protocol) => {
+        const status = document.querySelector('#status');
+        try { 
+          await navigator.clipboard.writeText(summaryText(protocol)); 
+          status.textContent = `Resumo copiado (Protocolo: ${escapeHTML(protocol)}). Cole na conversa.`; 
+          status.style.color = 'var(--ok)'; 
+        }
+        catch { 
+          status.textContent = `Protocolo ${escapeHTML(protocol)} gerado, mas falhamos ao copiar.`; 
+          status.style.color = 'var(--danger)';
+        }
+        const allBtns = app.querySelectorAll('.actions button');
+        allBtns.forEach(b => b.disabled = false);
+        e.currentTarget.textContent = 'Copiar resumo novamente';
+        isSubmitting = false;
+      });
     });
   }
   
@@ -431,10 +506,15 @@ async function route() {
 
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  let currentTransition = null;
+
   if (document.startViewTransition && !reduceMotion) {
-    document.startViewTransition(() => {
+    if (currentTransition) currentTransition.skipTransition();
+    currentTransition = document.startViewTransition(() => {
       updateDOM();
     });
+    currentTransition.finished.catch(() => {});
+    currentTransition.updateCallbackDone.catch(() => {});
   } else {
     if (app.children.length && !reduceMotion) {
       app.inert = true;

@@ -1,4 +1,4 @@
-import { db, auth, collection, onSnapshot, doc, updateDoc, query, orderBy, addDoc, setDoc, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from './config.js';
+import { db, auth, collection, getDocs, onSnapshot, doc, updateDoc, query, orderBy, addDoc, setDoc, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, STATUS, getDoc } from './config.js';
 
 let currentOS = null;
 let osDataList = [];
@@ -18,10 +18,31 @@ const searchAnnouncer = document.getElementById('search-announcer');
 const allowedEmails = ['loliver242@gmail.com', 'marcus190373@gmail.com'];
 
 // Helper: Escape HTML
-const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+const escapeHTML = value => String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+
+// Helper: Formatar Data
+function formatDate(v, fallback = '—') {
+  if (!v) return fallback;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? fallback : d.toLocaleDateString('pt-BR');
+}
+
+function isValidCpf(cpf) {
+  cpf = cpf.replace(/\D/g, '');
+  if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false;
+  let sum = 0, rest;
+  for (let i = 1; i <= 9; i++) sum = sum + parseInt(cpf.substring(i-1, i)) * (11 - i);
+  rest = (sum * 10) % 11;
+  if ((rest === 10) || (rest === 11)) rest = 0;
+  if (rest !== parseInt(cpf.substring(9, 10))) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum = sum + parseInt(cpf.substring(i-1, i)) * (12 - i);
+  rest = (sum * 10) % 11;
+  if ((rest === 10) || (rest === 11)) rest = 0;
+  return rest === parseInt(cpf.substring(10, 11));
+}
 
 // --- Toast System ---
-let toastTimeout;
 function showToast(message, type = 'success') {
   let container = document.getElementById('toast-container');
   if (!container) {
@@ -69,22 +90,36 @@ if (themeButton) {
 // --- Auth ---
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    if (!allowedEmails.includes(user.email)) {
+    if (!user.emailVerified || !allowedEmails.includes(user.email)) {
       await signOut(auth);
       loginError.textContent = 'Acesso negado: Usuário não autorizado.';
       loginError.classList.remove('u-hidden');
       loginScreen.removeAttribute('hidden');
       dashboard.setAttribute('hidden', '');
+      const btn = document.getElementById('google-login-btn');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="u-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Entrar com Google';
+      }
       return;
     }
 
     loginScreen.setAttribute('hidden', '');
     dashboard.removeAttribute('hidden');
+    
+    // Reset login button if it was disabled
+    const btn = document.getElementById('google-login-btn');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="u-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Entrar com Google';
+    }
+    
     loadOS();
     loadClients();
   } else {
     loginScreen.removeAttribute('hidden');
     dashboard.setAttribute('hidden', '');
+    unsubscribeAll();
   }
 });
 
@@ -112,16 +147,20 @@ document.getElementById('google-login-btn').addEventListener('click', async (e) 
 });
 
 document.getElementById('logout').addEventListener('click', async () => {
-  await signOut(auth);
+  const confirmLogout = confirm("Deseja realmente sair?");
+  if (confirmLogout) {
+    await signOut(auth);
+    showToast("Você saiu com segurança.", "success");
+  }
 });
 
 // --- Tab System ---
 document.querySelectorAll('.tab').forEach(btn => {
   btn.addEventListener('click', (e) => {
     document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', 'false'));
-    e.target.setAttribute('aria-selected', 'true');
+    e.currentTarget.setAttribute('aria-selected', 'true');
     document.querySelectorAll('.tab-content').forEach(c => c.setAttribute('hidden', ''));
-    document.getElementById(e.target.dataset.target).removeAttribute('hidden');
+    document.getElementById(e.currentTarget.dataset.target).removeAttribute('hidden');
   });
 });
 
@@ -150,7 +189,8 @@ if (searchInput) {
 }
 
 function updateFilterCounts() {
-  const counts = { all: osDataList.length, Aberto: 0, 'Em Reparo': 0, Finalizado: 0 };
+  const counts = { all: osDataList.length };
+  STATUS.forEach(s => counts[s.id] = 0);
   osDataList.forEach(os => {
     if (counts[os.status] !== undefined) counts[os.status]++;
   });
@@ -163,12 +203,20 @@ function updateFilterCounts() {
 }
 
 // --- Data Loading ---
+let unsubscribes = [];
+
+function unsubscribeAll() {
+  unsubscribes.forEach(unsub => unsub());
+  unsubscribes = [];
+}
+
 function loadClients() {
   const q = query(collection(db, "clients"), orderBy("createdAt", "desc"));
-  onSnapshot(q, (snapshot) => {
+  const unsub = onSnapshot(q, (snapshot) => {
     clientDataList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderClients();
   });
+  unsubscribes.push(unsub);
 }
 
 function renderClients() {
@@ -187,7 +235,8 @@ function renderClients() {
   const osCountByClient = {};
   osDataList.forEach(os => {
     if (os.clientCpf) {
-      osCountByClient[os.clientCpf] = (osCountByClient[os.clientCpf] || 0) + 1;
+      const cpfKey = String(os.clientCpf).replace(/\D/g, '');
+      osCountByClient[cpfKey] = (osCountByClient[cpfKey] || 0) + 1;
     }
   });
   
@@ -203,15 +252,15 @@ function renderClients() {
         <span>${escapeHTML(c.cpf)}</span>
       </div>
       <div>${escapeHTML(c.phone)}</div>
-      <div class="os-row-date">${new Date(c.createdAt).toLocaleDateString('pt-BR')}</div>
-      <div>
-        <span class="count" style="background:var(--surface); padding: 4px 10px; border-radius:var(--r-pill); font-weight:700;">
-          ${osCountByClient[c.id] || 0}
-        </span>
-      </div>
+      <div class="os-row-date">${formatDate(c.createdAt)}</div>
+        <div>
+          <span class="count" style="background:var(--surface); padding: 4px 10px; border-radius:var(--r-pill); font-weight:700;">
+            ${osCountByClient[String(c.id).replace(/\D/g, '')] || 0}
+          </span>
+        </div>
       <div style="display:flex; gap:8px; justify-content: flex-end;">
-        <button class="btn secondary" style="min-height:44px; padding:0 12px; font-size:12px;" onclick="window.editClient('${c.id}')" title="Editar">✏️</button>
-        <button class="btn primary" style="min-height:44px; padding:0 12px; font-size:12px;" onclick="window.newOSForClient('${c.id}')" title="Nova OS">OS+</button>
+        <button class="btn secondary" style="min-height:44px; padding:0 12px; font-size:12px;" data-action="editClient" data-id="${escapeHTML(c.id)}" title="Editar">✏️</button>
+        <button class="btn primary" style="min-height:44px; padding:0 12px; font-size:12px;" data-action="newOSForClient" data-id="${escapeHTML(c.id)}" title="Nova OS">OS+</button>
       </div>
     </div>
   `).join('');
@@ -226,7 +275,7 @@ function renderClients() {
   }
 }
 
-window.editClient = (id) => {
+const editClient = (id) => {
   const client = clientDataList.find(c => c.id === id);
   if (!client) return;
   document.getElementById('new-cli-name').value = client.name;
@@ -239,7 +288,7 @@ window.editClient = (id) => {
   openModal('new-client-modal');
 };
 
-window.newOSForClient = (id) => {
+const newOSForClient = (id) => {
   document.getElementById('new-os-form').reset();
   document.getElementById('new-os-client-select').value = id;
   openModal('new-os-modal');
@@ -247,24 +296,16 @@ window.newOSForClient = (id) => {
 
 function loadOS() {
   const q = query(collection(db, "os_list"), orderBy("createdAt", "desc"));
-  onSnapshot(q, (snapshot) => {
+  const unsub = onSnapshot(q, (snapshot) => {
     osDataList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     updateFilterCounts();
     renderTable();
     renderClients(); // Para atualizar contagem de OS
   });
+  unsubscribes.push(unsub);
 }
 
 const normalizeStr = str => String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-const statusClasses = {
-  'Aberto': 'st-aberto',
-  'Em Análise': 'st-analise',
-  'Orçamento Enviado': 'st-orcamento',
-  'Em Reparo': 'st-reparo',
-  'Finalizado': 'st-final',
-  'Cancelado': 'st-cancel'
-};
 
 function renderTable() {
   const tbody = document.getElementById('os-list-container');
@@ -304,7 +345,7 @@ function renderTable() {
       tbody.innerHTML = `
         <div class="empty-state">
           <p>Nenhum resultado para "${escapeHTML(searchQuery)}"</p>
-          <button class="secondary" onclick="document.getElementById('search-input').value=''; document.getElementById('search-input').dispatchEvent(new Event('input'))">Limpar filtro</button>
+          <button class="secondary" data-action="clearSearch">Limpar filtro</button>
         </div>`;
     } else {
       tbody.innerHTML = `
@@ -312,7 +353,6 @@ function renderTable() {
           <p>Nenhuma ordem encontrada.</p>
         </div>`;
     }
-    document.getElementById('pagination-info').textContent = '';
     return;
   }
 
@@ -325,9 +365,6 @@ function renderTable() {
     <div class="os-row">
       <div class="os-row-header">
         <div class="os-row-protocol">${escapeHTML(os.protocol)}</div>
-        <div class="os-row-action" style="display:none;" id="mobile-action-${os.id}">
-          <button type="button" aria-label="Gerenciar OS ${escapeHTML(os.protocol)}" onclick="window.openEdit('${os.id}')"></button>
-        </div>
       </div>
       <div class="os-row-client">
         <strong>${escapeHTML(os.client)}</strong>
@@ -337,14 +374,15 @@ function renderTable() {
         ${escapeHTML(os.device)}<br><small>${escapeHTML(os.model || '')}</small>
       </div>
       <div>
-        <span class="status-badge ${statusClasses[os.status] || 'st-aberto'}">${os.status}</span>
+        <span class="status-badge ${STATUS.find(s => s.id === os.status)?.cls || 'st-aberto'}">${escapeHTML(STATUS.find(s => s.id === os.status)?.label || os.status)}</span>
       </div>
       <div class="os-row-date">
-        ${new Date(os.updatedAt).toLocaleDateString('pt-BR')}
+        ${formatDate(os.updatedAt)}
       </div>
-      <div class="os-row-action" id="desktop-action-${os.id}">
-        <button type="button" aria-label="Gerenciar" onclick="window.openEdit('${os.id}')">
+      <div class="os-row-action">
+        <button type="button" aria-label="Gerenciar" data-action="openEdit" data-id="${escapeHTML(os.id)}">
            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+           <span class="mobile-text">Gerenciar &gt;</span>
         </button>
       </div>
     </div>
@@ -358,28 +396,37 @@ function renderTable() {
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; padding-top:16px; border-top:1px solid var(--line);">
         <span class="micro" style="margin:0;">Mostrando ${startIndex + 1}-${Math.min(startIndex + ITEMS_PER_PAGE, totalItems)} de ${totalItems} ordens</span>
         <div style="display:flex; gap:8px;">
-          <button class="secondary" style="min-height:44px; padding:0 16px;" ${currentPage === 1 ? 'disabled' : ''} onclick="window.changePage(-1)">Anterior</button>
-          <button class="secondary" style="min-height:44px; padding:0 16px;" ${currentPage === totalPages ? 'disabled' : ''} onclick="window.changePage(1)">Próxima</button>
+          <button class="secondary" style="min-height:44px; padding:0 16px;" ${currentPage === 1 ? 'disabled' : ''} data-action="changePage" data-val="-1">Anterior</button>
+          <button class="secondary" style="min-height:44px; padding:0 16px;" ${currentPage === totalPages ? 'disabled' : ''} data-action="changePage" data-val="1">Próxima</button>
         </div>
       </div>
     `;
   }
   
   tbody.innerHTML = html;
-  
-  // Script para mobile action visibility
-  if (window.innerWidth <= 900) {
-    paginated.forEach(os => {
-      document.getElementById(`desktop-action-${os.id}`).style.display = 'none';
-      document.getElementById(`mobile-action-${os.id}`).style.display = 'block';
-    });
-  }
 }
 
-window.changePage = (dir) => {
+const changePage = (dir) => {
   currentPage += dir;
   renderTable();
 };
+
+// Global click delegator
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  
+  if (action === 'openEdit') openEdit(btn.dataset.id);
+  else if (action === 'editClient') editClient(btn.dataset.id);
+  else if (action === 'newOSForClient') newOSForClient(btn.dataset.id);
+  else if (action === 'changePage') changePage(parseInt(btn.dataset.val));
+  else if (action === 'clearSearch') {
+    const sInput = document.getElementById('search-input');
+    sInput.value = '';
+    sInput.dispatchEvent(new Event('input'));
+  }
+});
 
 // --- Modals ---
 let activeTrigger = null;
@@ -426,15 +473,15 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-window.openEdit = (id) => {
+const openEdit = async (id) => {
   currentOS = osDataList.find(o => o.id === id);
   if (!currentOS) return;
   
-  document.getElementById('modal-protocol').textContent = escapeHTML(currentOS.protocol);
-  document.getElementById('modal-client').textContent = escapeHTML(currentOS.client);
-  document.getElementById('modal-phone').textContent = escapeHTML(currentOS.phone || 'Não informado');
-  document.getElementById('modal-device').textContent = escapeHTML(`${currentOS.device} ${currentOS.model ? '('+currentOS.model+')' : ''}`);
-  document.getElementById('modal-problem').textContent = escapeHTML(currentOS.problem);
+  document.getElementById('modal-protocol').textContent = currentOS.protocol;
+  document.getElementById('modal-client').textContent = currentOS.client;
+  document.getElementById('modal-phone').textContent = currentOS.phone || 'Não informado';
+  document.getElementById('modal-device').textContent = `${currentOS.device} ${currentOS.model ? '('+currentOS.model+')' : ''}`;
+  document.getElementById('modal-problem').textContent = currentOS.problem;
   
   document.getElementById('os-budget').value = currentOS.budget || '';
   document.getElementById('os-notes').value = '';
@@ -445,14 +492,17 @@ window.openEdit = (id) => {
     btn.setAttribute('aria-checked', btn.dataset.value === currentOS.status);
   });
   
+  const histSnap = await getDocs(query(collection(db, "os_list", currentOS.id, "history"), orderBy("date", "desc")));
+  const historyList = histSnap.docs.map(d => d.data());
+  
   const historyDiv = document.getElementById('modal-history');
-  if (currentOS.history && currentOS.history.length > 0) {
-    historyDiv.innerHTML = currentOS.history.map(h => `
+  if (historyList.length > 0) {
+    historyDiv.innerHTML = historyList.map(h => `
       <div class="history-item">
         <strong style="color:var(--text);">${escapeHTML(h.action)}</strong> &nbsp;<span style="color:var(--muted)">${new Date(h.date).toLocaleString('pt-BR')}</span><br>
         <span style="color: var(--text);">${escapeHTML(h.note)}</span>
       </div>
-    `).reverse().join('');
+    `).join('');
   } else {
     historyDiv.innerHTML = '<span style="color:var(--muted)">Nenhum histórico registrado.</span>';
   }
@@ -481,37 +531,33 @@ document.getElementById('modal-whatsapp-btn').addEventListener('click', () => {
 });
 
 // Edit OS
-document.getElementById('edit-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
+async function submitEditForm(e) {
+  if (e) e.preventDefault();
   
-  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const submitBtn = document.querySelector('#edit-form button[type="submit"]');
   const initialText = submitBtn.textContent;
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<div class="spinner"></div> Salvando...';
   
   const newStatus = document.getElementById('status-hidden-input').value;
-  const newBudget = document.getElementById('os-budget').value;
+  let newBudget = document.getElementById('os-budget').value.trim();
+  newBudget = newBudget ? Number(newBudget) : null;
   const newNotes = document.getElementById('os-notes').value;
   const newUpdatedAt = new Date().toISOString();
   
-  let newHistory = currentOS.history ? [...currentOS.history] : [];
   let historyNote = '';
   if (newStatus !== currentOS.status) {
     historyNote += `Status alterado de "${currentOS.status}" para "${newStatus}". `;
   }
-  if (newBudget && newBudget !== currentOS.budget) {
-    historyNote += `Orçamento atualizado para R$ ${newBudget}. `;
+  if (newBudget !== currentOS.budget) {
+    if (newBudget === null) {
+      historyNote += `Orçamento removido. `;
+    } else {
+      historyNote += `Orçamento atualizado para R$ ${newBudget}. `;
+    }
   }
   if (newNotes.trim()) {
     historyNote += `Nota adicionada: ${newNotes}`;
-  }
-  
-  if (historyNote) {
-    newHistory.push({
-      date: newUpdatedAt,
-      action: 'Atualização',
-      note: historyNote
-    });
   }
   
   try {
@@ -519,9 +565,17 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     await updateDoc(osRef, {
       status: newStatus,
       budget: newBudget,
-      updatedAt: newUpdatedAt,
-      history: newHistory
+      updatedAt: newUpdatedAt
     });
+    
+    if (historyNote) {
+       await addDoc(collection(db, "os_list", currentOS.id, "history"), {
+         date: newUpdatedAt,
+         action: 'Atualização',
+         note: historyNote
+       });
+    }
+    
     showToast("Ordem de Serviço atualizada com sucesso!");
     closeModal('edit-modal');
   } catch (error) {
@@ -531,10 +585,11 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     submitBtn.disabled = false;
     submitBtn.textContent = initialText;
   }
-});
+}
+document.getElementById('edit-form').addEventListener('submit', submitEditForm);
 
 // Cancel Dialog logic
-window.confirmCancel = () => {
+document.getElementById('cancel-os-btn')?.addEventListener('click', () => {
   const cancelDialog = document.createElement('dialog');
   cancelDialog.style = "border:none; border-radius: var(--r-card); padding: var(--s4); background: var(--bg); color: var(--text); max-width: 400px; text-align:center; margin: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);";
   cancelDialog.innerHTML = `
@@ -564,9 +619,9 @@ window.confirmCancel = () => {
     document.getElementById('status-hidden-input').value = 'Cancelado';
     
     // Auto submit form
-    document.getElementById('edit-form').dispatchEvent(new Event('submit'));
+    await submitEditForm();
   };
-}
+});
 
 // Attach Close buttons
 document.querySelectorAll('[data-close]').forEach(btn => {
@@ -593,9 +648,9 @@ document.getElementById('new-client-form').addEventListener('submit', async (e) 
   const submitBtn = e.target.querySelector('button[type="submit"]');
   const initialText = submitBtn.textContent;
   
-  const cpf = document.getElementById('new-cli-cpf').value.trim();
-  if (cpf.length < 11) {
-    showToast("CPF / CNPJ inválido.", "error");
+  const cpf = document.getElementById('new-cli-cpf').value.replace(/\D/g, '');
+  if (!isValidCpf(cpf)) {
+    showToast("CPF inválido.", "error");
     return;
   }
   
@@ -632,6 +687,24 @@ document.getElementById('new-client-form').addEventListener('submit', async (e) 
   }
 });
 
+function generateSafeProtocol() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  
+  const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const array = new Uint8Array(5);
+  crypto.getRandomValues(array);
+  
+  let random = '';
+  for (let i = 0; i < 5; i++) {
+    random += ALPHABET[array[i] % ALPHABET.length];
+  }
+  
+  return `OS-${yyyy}${mm}${dd}-${random}`;
+}
+
 // New OS Submit
 document.getElementById('new-os-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -654,28 +727,38 @@ document.getElementById('new-os-form').addEventListener('submit', async (e) => {
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<div class="spinner"></div> Criando...';
   
-  const osData = {
-    protocol: 'OS-' + Math.floor(1000 + Math.random() * 9000),
+  const protocol = generateSafeProtocol();
+  const payload = {
     client: client.name,
     clientCpf: client.id, 
     phone: client.phone,
     device: document.getElementById('new-device').value,
     model: document.getElementById('new-model').value.trim(),
     problem: document.getElementById('new-problem').value.trim(),
-    status: 'Aberto',
-    budget: '',
+    details: '',
+    origin: 'admin',
+    status: 'aberto',
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    history: [{
-      date: new Date().toISOString(),
-      action: 'Criação',
-      note: 'OS gerada pelo painel administrativo.'
-    }]
+    updatedAt: new Date().toISOString()
   };
 
   try {
-    await addDoc(collection(db, "os_list"), osData);
-    showToast("Ordem de Serviço criada com sucesso!");
+    let finalProtocol = null;
+    for (let i = 0; i < 3; i++) {
+      const p = generateSafeProtocol();
+      payload.protocol = p;
+      const ref = doc(db, 'os_list', p);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, payload);
+        finalProtocol = p;
+        break;
+      }
+    }
+    
+    if (!finalProtocol) throw new Error("Não foi possível gerar um protocolo único. Tente novamente.");
+    
+    showToast(`Ordem de Serviço ${finalProtocol} criada com sucesso!`);
     closeModal('new-os-modal');
   } catch (err) {
     console.error("Error creating OS:", err);
@@ -683,5 +766,25 @@ document.getElementById('new-os-form').addEventListener('submit', async (e) => {
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = initialText;
+  }
+});
+
+// Input Mask Listeners
+document.body.addEventListener('input', (e) => {
+  const input = e.target;
+  if (input.name === 'phone' || input.id === 'new-cli-phone') {
+    let v = input.value.replace(/\D/g, '');
+    if (v.length > 11) v = v.slice(0, 11);
+    if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
+    if (v.length > 10) v = `${v.slice(0,10)}-${v.slice(10)}`;
+    input.value = v;
+  }
+  if (input.name === 'cpf' || input.id === 'new-cli-cpf') {
+    let v = input.value.replace(/\D/g, '');
+    if (v.length > 11) v = v.slice(0, 11);
+    if (v.length > 3) v = `${v.slice(0,3)}.${v.slice(3)}`;
+    if (v.length > 7) v = `${v.slice(0,7)}.${v.slice(7)}`;
+    if (v.length > 11) v = `${v.slice(0,11)}-${v.slice(11)}`;
+    input.value = v;
   }
 });

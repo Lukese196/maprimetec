@@ -160,10 +160,14 @@
   background: none;
   border: none;
   color: var(--muted);
+  cursor: pointer;
 }
 .os-row-action button:hover {
   background: var(--line);
   color: var(--text);
+}
+.os-row-action button .mobile-text {
+  display: none;
 }
 
 /* Empty State */
@@ -405,12 +409,13 @@
     color: var(--accent);
     width: auto;
     height: 44px;
-  }
-  .os-row-action button::after {
-    content: "Gerenciar >";
+    gap: 4px;
   }
   .os-row-action button svg {
     display: none;
+  }
+  .os-row-action button .mobile-text {
+    display: inline;
   }
 }
 

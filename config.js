@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDoc, getDocs, doc, onSnapshot, updateDoc, query, orderBy, where, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, onSnapshot, doc, updateDoc, query, orderBy, setDoc, getDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check.js";
 
 const firebaseConfig = {
   projectId: "maprimetec-os",
@@ -16,4 +17,33 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-export { db, auth, collection, addDoc, getDoc, getDocs, doc, onSnapshot, updateDoc, query, orderBy, where, setDoc, signInWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup };
+const SITE_CONFIG = {
+  whatsappNumber: '5511999999999', // Coloque aqui o número real do WhatsApp (55 + DDD + Numero)
+  appCheckSiteKey: '' // Passo: Vá ao Console do reCAPTCHA v3, gere uma chave (não enterprise) para maprimetec-os.web.app e cole aqui.
+};
+
+if (SITE_CONFIG.appCheckSiteKey) {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(SITE_CONFIG.appCheckSiteKey), 
+      isTokenAutoRefreshEnabled: true
+    });
+  } catch (e) {
+    console.warn('App check init falhou:', e);
+  }
+}
+
+export const STATUS = [
+  { id: 'aberto',     label: 'Aberto',            cls: 'st-aberto'    },
+  { id: 'analise',    label: 'Em Análise',        cls: 'st-analise'   },
+  { id: 'orcamento',  label: 'Orçamento Enviado', cls: 'st-orcamento' },
+  { id: 'reparo',     label: 'Em Reparo',         cls: 'st-reparo'    },
+  { id: 'finalizado', label: 'Finalizado',        cls: 'st-final'     },
+  { id: 'cancelado',  label: 'Cancelado',         cls: 'st-cancel'    }
+];
+
+export { 
+  db, auth, collection, getDocs, doc, getDoc, onSnapshot, 
+  updateDoc, query, orderBy, setDoc, addDoc, onAuthStateChanged, signOut, 
+  GoogleAuthProvider, signInWithPopup, signInAnonymously, SITE_CONFIG 
+};

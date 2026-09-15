@@ -1,37 +1,44 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Function to check if user is authenticated (admin)
     function isAdmin() {
-      return request.auth != null && (
-        request.auth.token.email == 'loliver242@gmail.com' ||
-        request.auth.token.email == 'marcus190373@gmail.com'
-      );
+      return request.auth != null
+          && request.auth.token.email_verified == true
+          && request.auth.token.email in ['loliver242@gmail.com', 'marcus190373@gmail.com'];
     }
 
-    match /clients/{phone} {
-      // Admins can read and write all client data
+    function osValida(osId) {
+      return request.resource.data.status == 'aberto'
+          && request.resource.data.protocol == osId
+          && request.resource.data.keys().hasOnly([
+               'protocol','client','clientCpf','phone','device','model',
+               'problem','details','status','createdAt','updatedAt',
+               'origin'
+             ])
+          && request.resource.data.keys().hasAll([
+               'protocol','client','clientCpf','phone','device','problem','status','createdAt'
+             ])
+          && request.resource.data.client is string
+          && request.resource.data.client.size() > 1
+          && request.resource.data.client.size() < 120
+          && request.resource.data.problem.size() < 2000
+          && request.resource.data.clientCpf.matches('^[0-9]{11}$|^[0-9]{14}$');
+    }
+
+    match /clients/{clientId} {
       allow read, write: if isAdmin();
-      // Public can create clients if they don't exist (when submitting a new OS from the site)
-      allow create: if !isAdmin() && request.resource.data.keys().hasAll(['name', 'phone', 'createdAt']);
     }
 
     match /os_list/{osId} {
-      // Admins can read, create, and update
-      allow read, create, update: if isAdmin();
-      
-      // Admins shouldn't be able to easily delete, but they can update status to Cancelled.
-      allow delete: if false;
+      allow get: if true;                       // consulta pública por protocolo (ID)
+      allow list: if isAdmin();
+      allow create: if request.auth != null && osValida(osId);
+      allow update, delete: if isAdmin();
 
-      // Public can only create a new OS from the site
-      allow create: if !isAdmin() && 
-                    request.resource.data.keys().hasAll(['protocol', 'client', 'phone', 'device', 'problem', 'status']) &&
-                    request.resource.data.status == 'Aberto';
-                    
-      // Permissive read for now so tracking works via query. Ideally we'd structure the DB differently.
-      allow read: if true; 
+      match /history/{histId} {
+        allow read, write: if isAdmin();
+      }
     }
   }
 }

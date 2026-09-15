@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marcus — coleção de poses</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f5f7;color:#1d1d1f;font:16px/1.5 system-ui,sans-serif}main{max-width:1280px;margin:auto;padding:48px 24px}header{margin-bottom:32px}small{color:#0071e3;font-weight:700;letter-spacing:.12em}h1{font-size:clamp(32px,5vw,56px);margin:8px 0}p{max-width:720px;color:#666}button,a{font:inherit}button{padding:10px 18px;border:1px solid #aaa;border-radius:8px;cursor:pointer}section{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}article{background:white;border:1px solid #ddd;border-radius:12px;overflow:hidden}.art{aspect-ratio:1;display:grid;place-items:center;background:#f0f1f3}.art img{width:92%;height:92%;object-fit:contain;image-rendering:pixelated}.dark .art{background:#252b38}h2{font-size:18px;margin:16px 18px 4px}article a{display:inline-block;color:#0067cc;margin:0 18px 18px}footer{margin-top:36px;color:#666;font-size:14px}@media print{button,article a{display:none}main{padding:12px}section{grid-template-columns:repeat(3,1fr);gap:10px}article{break-inside:avoid}h1{font-size:28px}}
+</style>
+<main><header><small>MA PRIME TEC / AVATAR</small><h1>Marcus, em pixels.</h1><p>12 poses e expressões para novas figurinhas. Cabelo curto grisalho, barba aparada e óculos retangulares, com a polo azul do projeto.</p><button type="button" id="tema" aria-pressed="false">Conferir em fundo escuro</button></header><section id="poses"></section><footer>PNG com transparência • Arte original em pixel art • Sem legendas incorporadas<br>Os arquivos são bases para criar figurinhas; esta coleção não é um instalador de pacote de WhatsApp.</footer></main>
+<script>
+const poses=[['01-joinha','Joinha'],['02-negativo','Negativo'],['03-ok','OK'],['04-ola','Olá'],['05-duvida','Dúvida'],['06-atento','Atento'],['07-alegre','Alegria'],['08-surpreso','Surpresa'],['09-obrigado','Obrigado'],['10-apontando','Apontando'],['11-notebook','Notebook'],['12-concluido','Concluído']];
+document.querySelector('#poses').innerHTML=poses.map(([file,label])=>`<article><div class="art"><img src="poses/${file}.png" alt="Avatar do Marcus: ${label}"></div><h2>${label}</h2><a href="poses/${file}.png" download>Baixar PNG</a></article>`).join('');
+document.querySelector('#tema').addEventListener('click',event=>{const dark=document.body.classList.toggle('dark');event.currentTarget.setAttribute('aria-pressed',String(dark));event.currentTarget.textContent=dark?'Conferir em fundo claro':'Conferir em fundo escuro';});
+</script></html>
