@@ -83,6 +83,8 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.2);
       transform: translateY(0);
       transition: transform 0.2s;
+      max-height: 90vh;
+      overflow-y: auto;
     }
     .modal h3 { margin-top: 0; font-size: 24px; }
     .hidden { display: none !important; opacity: 0; pointer-events: none; }
@@ -110,6 +112,15 @@
       border-color: var(--blue);
     }
     
+    .tab {
+      background: none; border: none; padding: 10px 20px; font-size: 16px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--text); border-bottom-color: var(--blue);
+    }
+    .tab-content.hidden { display: none !important; }
+
     .mascot-login {
       width: 100px;
       height: 100px;
@@ -119,6 +130,16 @@
       display: flex;
       justify-content: center;
       align-items: center;
+    }
+    .history-item {
+      padding-left: 16px;
+      border-left: 2px solid var(--line);
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .history-item::before {
+      content: '';
+      position: absolute; left: -5px; top: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--blue);
     }
   </style>
 </head>
@@ -130,12 +151,13 @@
     </div>
     <h2 style="margin-top: 0;">Acesso Restrito</h2>
     <p class="subtitle">Área de gerenciamento técnico</p>
-    <form id="login-form">
-      <label class="field" for="password" style="text-align: left;">Senha de Acesso</label>
-      <input type="password" id="password" required>
-      <button type="submit" class="primary" style="width: 100%; margin-top: 24px;">Acessar Painel</button>
-    </form>
-    <p class="micro" style="margin-top: 20px;">Dica: a senha é admin123</p>
+    <div style="margin-top: 30px;">
+      <button type="button" class="primary" id="google-login-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: white; color: #333; border: 1px solid var(--line);">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px;">
+        Entrar com Google
+      </button>
+    </div>
+    <p class="micro" style="margin-top: 20px;" id="login-error"></p>
   </div>
 
   <div id="dashboard" class="admin-container hidden">
@@ -152,9 +174,17 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="tabs" style="display: flex; gap: 20px; margin-bottom: 30px; border-bottom: 1px solid var(--line);">
+      <button class="tab active" data-target="tab-os">Ordens de Serviço</button>
+      <button class="tab" data-target="tab-clients">Clientes</button>
+    </div>
+
+    <div id="tab-os" class="card tab-content">
       <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 20px;">
-        <h2 style="margin: 0; font-size: 28px;">Ordens de Serviço</h2>
+        <div style="display:flex; align-items: center; gap: 16px;">
+          <h2 style="margin: 0; font-size: 28px;">Ordens de Serviço</h2>
+          <button class="primary" id="btn-new-os" style="padding: 8px 16px; font-size: 14px; min-height: auto;">+ Nova OS</button>
+        </div>
         
         <div class="filter-bar">
           <button class="filter-btn active" data-filter="all">Todas</button>
@@ -182,6 +212,28 @@
         </table>
       </div>
     </div>
+    
+    <div id="tab-clients" class="card tab-content hidden">
+      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display:flex; align-items: center; gap: 16px;">
+          <h2 style="margin: 0; font-size: 28px;">Clientes</h2>
+          <button class="primary" id="btn-new-client" style="padding: 8px 16px; font-size: 14px; min-height: auto;">+ Novo Cliente</button>
+        </div>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="os-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>WhatsApp</th>
+              <th>Cadastrado em</th>
+            </tr>
+          </thead>
+          <tbody id="client-list">
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <div id="edit-modal" class="modal-backdrop hidden">
@@ -200,9 +252,24 @@
           <span style="color: var(--muted); display: block; font-size: 12px;">Equipamento</span>
           <strong id="modal-device"></strong>
         </div>
+        <div>
+          <span style="color: var(--muted); display: block; font-size: 12px;">Telefone (WhatsApp)</span>
+          <strong id="modal-phone"></strong>
+        </div>
+        <div>
+          <span style="color: var(--muted); display: block; font-size: 12px;">Notificar Cliente</span>
+          <button type="button" class="primary whatsapp" id="modal-whatsapp-btn" style="background: var(--green); padding: 6px 12px; font-size: 12px; min-height: auto; margin-top: 4px;">Mensagem ↗</button>
+        </div>
         <div style="grid-column: 1 / -1;">
           <span style="color: var(--muted); display: block; font-size: 12px;">Problema Relatado</span>
           <span id="modal-problem"></span>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Histórico da OS</h4>
+        <div id="modal-history" style="background: var(--surface); padding: 16px; border-radius: 12px; max-height: 200px; overflow-y: auto; font-size: 13px;">
+          <!-- history items -->
         </div>
       </div>
 
@@ -217,21 +284,116 @@
           <option value="Cancelado">Cancelado</option>
         </select>
         
-        <label class="field" style="margin-top: 20px;">Notas Técnicas Internas</label>
-        <textarea id="os-notes" placeholder="Ex: Tela trocada, valor do orçamento R$ 250, aguardando peça..." style="min-height: 100px; background:var(--bg);"></textarea>
+        <div style="margin-top: 16px;">
+          <label class="field">Valor do Orçamento (R$)</label>
+          <input type="number" step="0.01" id="os-budget" placeholder="0.00" style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:16px;">
+        </div>
         
-        <div style="display:flex; gap:12px; margin-top:30px; justify-content: flex-end;">
-          <button type="button" class="text-button" id="close-modal">Cancelar</button>
-          <button type="submit" class="primary">Salvar Status</button>
+        <label class="field" style="margin-top: 16px;">Adicionar Nota Interna (Opcional)</label>
+        <textarea id="os-notes" style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:14px; resize:vertical; min-height:80px;" placeholder="Ex: Peça encomendada..."></textarea>
+        
+        <div style="display:flex; gap:12px; margin-top:24px;">
+          <button type="button" class="secondary" id="close-modal" style="flex:1">Cancelar</button>
+          <button type="submit" class="primary" style="flex:1">Salvar Alterações</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script>
+  <div id="new-os-modal" class="modal-backdrop hidden">
+    <div class="card modal-content" style="max-width: 600px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+        <h3 style="margin:0; font-size: 24px;">Abrir Nova OS</h3>
+        <button id="close-new-os-x" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--muted);">&times;</button>
+      </div>
+      
+      <form id="new-os-form">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div style="grid-column: 1 / -1; display:flex; align-items:flex-end; gap:12px;">
+            <div style="flex:1;">
+              <label class="field">Cliente *</label>
+              <select id="new-os-client-select" required style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:16px;">
+                <option value="">Selecione um cliente</option>
+              </select>
+            </div>
+            <button type="button" class="text-button" id="btn-new-client-from-os" style="padding: 16px; border: 1px solid var(--blue); border-radius: 14px; color: var(--blue);">+ Novo Cliente</button>
+          </div>
+          <div>
+            <label class="field">Equipamento *</label>
+            <select id="new-device" required style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:16px;">
+              <option value="Notebook">Notebook</option>
+              <option value="Computador">Computador</option>
+              <option value="Impressora">Impressora</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div>
+            <label class="field">Modelo/Marca</label>
+            <input type="text" id="new-model" placeholder="Opcional">
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label class="field">Problema Relatado *</label>
+            <textarea id="new-problem" required style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:14px; min-height:80px;" placeholder="Descreva o problema da máquina..."></textarea>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:12px; margin-top:24px;">
+          <button type="button" class="secondary" id="close-new-os" style="flex:1">Cancelar</button>
+          <button type="submit" class="primary" style="flex:1">Criar OS e Cliente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="new-client-modal" class="modal-backdrop hidden">
+    <div class="card modal-content modal" style="max-width: 600px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+        <h3 style="margin:0; font-size: 24px;">Novo Cliente</h3>
+        <button id="close-new-client-x" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--muted);">&times;</button>
+      </div>
+      
+      <form id="new-client-form">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div style="grid-column: 1 / -1;">
+            <label class="field">Nome Completo *</label>
+            <input type="text" id="new-cli-name" required placeholder="Ex: João Silva">
+          </div>
+          <div>
+            <label class="field">CPF / CNPJ *</label>
+            <input type="text" id="new-cli-cpf" required placeholder="Apenas números" oninput="this.value = this.value.replace(/\\D/g, '')">
+          </div>
+          <div>
+            <label class="field">WhatsApp *</label>
+            <input type="tel" id="new-cli-phone" required placeholder="DDD + Número">
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label class="field">Endereço</label>
+            <input type="text" id="new-cli-address" placeholder="Rua, número, bairro">
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label class="field">E-mail</label>
+            <input type="email" id="new-cli-email" placeholder="cliente@email.com">
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:12px; margin-top:24px;">
+          <button type="button" class="secondary" id="close-new-client" style="flex:1">Cancelar</button>
+          <button type="submit" class="primary" style="flex:1">Salvar Cliente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db, auth, collection, onSnapshot, doc, updateDoc, query, orderBy, addDoc, setDoc, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from './config.js';
+
     let currentOS = null;
     let osDataList = [];
+    let clientDataList = [];
     let activeFilter = 'all';
+    
+    // Security (Rule 15): Escape de Conteúdo HTML
+    const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
     const statusColors = {
       'Aberto': 'var(--blue)',
@@ -244,28 +406,47 @@
 
     const loginScreen = document.getElementById('login-screen');
     const dashboard = document.getElementById('dashboard');
+    const loginError = document.getElementById('login-error');
     
-    if (localStorage.getItem('ma_admin_logged') === 'true') {
-      loginScreen.classList.add('hidden');
-      dashboard.classList.remove('hidden');
-      loadOS();
-    }
-
-    document.getElementById('login-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (document.getElementById('password').value === 'admin123') {
-        localStorage.setItem('ma_admin_logged', 'true');
+    // Autenticação no lado do servidor (Regra 6 e 9)
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
         loginScreen.classList.add('hidden');
         dashboard.classList.remove('hidden');
         loadOS();
+        loadClients();
       } else {
-        alert('Senha incorreta. Tente admin123.');
+        loginScreen.classList.remove('hidden');
+        dashboard.classList.add('hidden');
       }
     });
 
-    document.getElementById('logout').addEventListener('click', () => {
-      localStorage.removeItem('ma_admin_logged');
-      location.reload();
+    document.getElementById('google-login-btn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('google-login-btn');
+      
+      try {
+        btn.disabled = true;
+        btn.innerHTML = 'Autenticando...';
+        loginError.textContent = '';
+        loginError.style.color = 'var(--text)';
+        
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+        // onAuthStateChanged takes care of the UI transition
+      } catch (err) {
+        console.error("ERRO LOGIN GOOGLE:", err);
+        alert("Erro no login: " + err.message); // Added alert to ensure visibility
+        loginError.textContent = 'Falha: ' + err.message;
+        loginError.style.color = '#ef4444';
+        
+        btn.disabled = false;
+        btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px;"> Entrar com Google`;
+      }
+    });
+
+    document.getElementById('logout').addEventListener('click', async () => {
+      await signOut(auth);
     });
 
     // Filtering
@@ -278,10 +459,52 @@
       });
     });
 
+    // Tabs
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById(e.target.dataset.target).classList.remove('hidden');
+      });
+    });
+
+    function loadClients() {
+      const q = query(collection(db, "clients"), orderBy("createdAt", "desc"));
+      onSnapshot(q, (snapshot) => {
+        clientDataList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderClients();
+      });
+    }
+
+    function renderClients() {
+      const tbody = document.getElementById('client-list');
+      if (clientDataList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 40px; color: var(--muted);">Nenhum cliente cadastrado.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = clientDataList.map(c => `
+        <tr>
+          <td><strong style="color:var(--text);">${escapeHTML(c.name)}</strong></td>
+          <td>${escapeHTML(c.phone)}</td>
+          <td style="color:var(--muted);">${new Date(c.createdAt).toLocaleDateString('pt-BR')}</td>
+        </tr>
+      `).join('');
+      
+      const osClientSelect = document.getElementById('new-os-client-select');
+      if (osClientSelect) {
+        osClientSelect.innerHTML = '<option value="">Selecione um cliente</option>' + clientDataList.map(c => `
+          <option value="${escapeHTML(c.id)}">${escapeHTML(c.name)} (${escapeHTML(c.cpf || 'Sem CPF')})</option>
+        `).join('');
+      }
+    }
+
     function loadOS() {
-      osDataList = JSON.parse(localStorage.getItem('maprime_os_list') || '[]');
-      osDataList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      renderTable();
+      const q = query(collection(db, "os_list"), orderBy("createdAt", "desc"));
+      onSnapshot(q, (snapshot) => {
+        osDataList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderTable();
+      });
     }
 
     function renderTable() {
@@ -298,12 +521,12 @@
 
       tbody.innerHTML = filtered.map(os => `
         <tr>
-          <td><strong style="color:var(--text);">${os.protocol}</strong></td>
+          <td><strong style="color:var(--text);">${escapeHTML(os.protocol)}</strong></td>
           <td>
-            <b>${os.client}</b>
-            ${os.notes ? `<span style="display:block; font-size:11px; color:var(--muted); margin-top:4px; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📝 ${os.notes}</span>` : ''}
+            <b>${escapeHTML(os.client)}</b>
+            ${os.notes ? `<span style="display:block; font-size:11px; color:var(--muted); margin-top:4px; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📝 ${escapeHTML(os.notes)}</span>` : ''}
           </td>
-          <td>${os.device}<br><small style="color:var(--muted)">${os.model || ''}</small></td>
+          <td>${escapeHTML(os.device)}<br><small style="color:var(--muted)">${escapeHTML(os.model || '')}</small></td>
           <td>
             <span class="status-badge" style="background: ${statusColors[os.status] || '#999'}">
               ${os.status}
@@ -313,7 +536,7 @@
             ${new Date(os.updatedAt).toLocaleDateString('pt-BR')}
           </td>
           <td>
-            <button class="primary" onclick="openEdit('${os.protocol}')" style="min-height: auto; padding: 10px 16px; font-size:13px; border-radius:10px;">Gerenciar</button>
+            <button class="primary" onclick="window.openEdit('${os.id}')" style="min-height: auto; padding: 10px 16px; font-size:13px; border-radius:10px;">Gerenciar</button>
           </td>
         </tr>
       `).join('');
@@ -322,20 +545,45 @@
     // Modal
     const modal = document.getElementById('edit-modal');
     
-    window.openEdit = (protocol) => {
-      currentOS = osDataList.find(o => o.protocol === protocol);
+    window.openEdit = (id) => {
+      currentOS = osDataList.find(o => o.id === id);
       if (!currentOS) return;
       
-      document.getElementById('modal-protocol').textContent = protocol;
-      document.getElementById('modal-client').textContent = currentOS.client;
-      document.getElementById('modal-device').textContent = `${currentOS.device} ${currentOS.model ? '('+currentOS.model+')' : ''}`;
-      document.getElementById('modal-problem').textContent = currentOS.problem;
+      document.getElementById('modal-protocol').textContent = escapeHTML(currentOS.protocol);
+      document.getElementById('modal-client').textContent = escapeHTML(currentOS.client);
+      document.getElementById('modal-phone').textContent = escapeHTML(currentOS.phone || 'Não informado');
+      document.getElementById('modal-device').textContent = escapeHTML(`${currentOS.device} ${currentOS.model ? '('+currentOS.model+')' : ''}`);
+      document.getElementById('modal-problem').textContent = escapeHTML(currentOS.problem);
       
       document.getElementById('os-status').value = currentOS.status;
-      document.getElementById('os-notes').value = currentOS.notes || '';
+      document.getElementById('os-budget').value = currentOS.budget || '';
+      document.getElementById('os-notes').value = '';
+      
+      const historyDiv = document.getElementById('modal-history');
+      if (currentOS.history && currentOS.history.length > 0) {
+        historyDiv.innerHTML = currentOS.history.map(h => `
+          <div class="history-item">
+            <span style="font-weight: 600;">${escapeHTML(h.action)}</span> - <span style="color:var(--muted)">${new Date(h.date).toLocaleString('pt-BR')}</span><br>
+            <span style="color: var(--muted);">${escapeHTML(h.note)}</span>
+          </div>
+        `).reverse().join('');
+      } else {
+        historyDiv.innerHTML = '<span style="color:var(--muted)">Nenhum histórico registrado.</span>';
+      }
       
       modal.classList.remove('hidden');
     };
+    
+    document.getElementById('modal-whatsapp-btn').addEventListener('click', () => {
+      if (!currentOS || !currentOS.phone) {
+        alert("Cliente não possui telefone cadastrado.");
+        return;
+      }
+      const msg = `Olá ${currentOS.client}!\n\nAqui é da MA PRIME TEC.\nTemos uma atualização sobre a sua Ordem de Serviço (Protocolo: *${currentOS.protocol}*).\n\nEquipamento: ${currentOS.device}\n*Status atual: ${currentOS.status}*\n\nSe precisar de algo, estamos à disposição!`;
+      const phoneOnlyNumbers = currentOS.phone.replace(/\D/g, '');
+      const fullPhone = phoneOnlyNumbers.length === 11 ? '55' + phoneOnlyNumbers : phoneOnlyNumbers;
+      window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    });
 
     const closeModal = () => modal.classList.add('hidden');
     document.getElementById('close-modal').addEventListener('click', closeModal);
@@ -344,16 +592,156 @@
       if (e.target === modal) closeModal();
     });
 
-    document.getElementById('edit-form').addEventListener('submit', (e) => {
+    document.getElementById('edit-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      currentOS.status = document.getElementById('os-status').value;
-      currentOS.notes = document.getElementById('os-notes').value;
-      currentOS.updatedAt = new Date().toISOString();
+      const newStatus = document.getElementById('os-status').value;
+      const newBudget = document.getElementById('os-budget').value;
+      const newNotes = document.getElementById('os-notes').value;
+      const newUpdatedAt = new Date().toISOString();
       
-      localStorage.setItem('maprime_os_list', JSON.stringify(osDataList));
-      closeModal();
-      loadOS();
+      let newHistory = currentOS.history ? [...currentOS.history] : [];
+      let historyNote = '';
+      if (newStatus !== currentOS.status) {
+        historyNote += `Status alterado de "${currentOS.status}" para "${newStatus}". `;
+      }
+      if (newBudget && newBudget !== currentOS.budget) {
+        historyNote += `Orçamento atualizado para R$ ${newBudget}. `;
+      }
+      if (newNotes.trim()) {
+        historyNote += `Nota adicionada: ${newNotes}`;
+      }
+      
+      if (historyNote) {
+        newHistory.push({
+          date: newUpdatedAt,
+          action: 'Atualização',
+          note: historyNote
+        });
+      }
+      
+      try {
+        const osRef = doc(db, "os_list", currentOS.id);
+        await updateDoc(osRef, {
+          status: newStatus,
+          budget: newBudget,
+          updatedAt: newUpdatedAt,
+          history: newHistory
+        });
+        closeModal();
+      } catch (error) {
+        console.error("Error updating OS:", error);
+        alert("Erro ao atualizar a OS.");
+      }
+    });
+
+    // New OS Modal Logic
+    const newOsModal = document.getElementById('new-os-modal');
+    const closeNewOs = () => newOsModal.classList.add('hidden');
+    
+    document.getElementById('btn-new-os').addEventListener('click', () => {
+      document.getElementById('new-os-form').reset();
+      newOsModal.classList.remove('hidden');
+    });
+    
+    document.getElementById('close-new-os').addEventListener('click', closeNewOs);
+    document.getElementById('close-new-os-x').addEventListener('click', closeNewOs);
+    newOsModal.addEventListener('click', (e) => {
+      if (e.target === newOsModal) closeNewOs();
+    });
+
+    // New Client Modal Logic
+    const newClientModal = document.getElementById('new-client-modal');
+    const closeNewClient = () => newClientModal.classList.add('hidden');
+    
+    document.getElementById('btn-new-client').addEventListener('click', () => {
+      document.getElementById('new-client-form').reset();
+      newClientModal.classList.remove('hidden');
+    });
+    document.getElementById('btn-new-client-from-os').addEventListener('click', () => {
+      document.getElementById('new-client-form').reset();
+      newClientModal.classList.remove('hidden');
+    });
+    
+    document.getElementById('close-new-client').addEventListener('click', closeNewClient);
+    document.getElementById('close-new-client-x').addEventListener('click', closeNewClient);
+    newClientModal.addEventListener('click', (e) => {
+      if (e.target === newClientModal) closeNewClient();
+    });
+
+    document.getElementById('new-client-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cpf = document.getElementById('new-cli-cpf').value.trim();
+      if (cpf.length < 11) {
+        alert("CPF / CNPJ inválido.");
+        return;
+      }
+      const clientData = {
+        name: document.getElementById('new-cli-name').value.trim(),
+        cpf: cpf,
+        phone: document.getElementById('new-cli-phone').value.trim(),
+        address: document.getElementById('new-cli-address').value.trim(),
+        email: document.getElementById('new-cli-email').value.trim(),
+        createdAt: new Date().toISOString()
+      };
+      
+      try {
+        const clientRef = doc(db, "clients", cpf); // Use CPF as ID
+        await setDoc(clientRef, clientData, { merge: true });
+        closeNewClient();
+        if(!document.getElementById('new-os-modal').classList.contains('hidden')) {
+           // pre select this client
+           setTimeout(() => {
+             document.getElementById('new-os-client-select').value = cpf;
+           }, 500);
+        }
+      } catch (err) {
+        console.error("Error creating Client:", err);
+        alert("Erro ao criar Cliente.");
+      }
+    });
+
+    document.getElementById('new-os-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const clientId = document.getElementById('new-os-client-select').value;
+      if (!clientId) {
+        alert("Selecione um cliente válido.");
+        return;
+      }
+      
+      const client = clientDataList.find(c => c.id === clientId);
+      if (!client) {
+        alert("Cliente não encontrado.");
+        return;
+      }
+      
+      const osData = {
+        protocol: 'OS-' + Math.floor(1000 + Math.random() * 9000),
+        client: client.name,
+        clientCpf: client.id, // Stores CPF here for the public area
+        phone: client.phone,
+        device: document.getElementById('new-device').value,
+        model: document.getElementById('new-model').value.trim(),
+        problem: document.getElementById('new-problem').value.trim(),
+        status: 'Aberto',
+        budget: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        history: [{
+          date: new Date().toISOString(),
+          action: 'Criação',
+          note: 'OS gerada pelo painel administrativo.'
+        }]
+      };
+
+      try {
+        await addDoc(collection(db, "os_list"), osData);
+        closeNewOs();
+      } catch (err) {
+        console.error("Error creating OS:", err);
+        alert("Erro ao criar OS.");
+      }
     });
   </script>
 </body>

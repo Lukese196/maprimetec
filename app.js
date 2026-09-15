@@ -1,6 +1,6 @@
 const app = document.querySelector('#app');
 const themeButton = document.querySelector('#theme');
-const state = { device: '', problem: '', model: '', details: '', name: '' };
+const state = { device: '', problem: '', model: '', details: '', name: '', phone: '' };
 const devices = ['Notebook', 'Computador', 'Impressora', 'Outro equipamento'];
 const problems = {
   computer: ['Não liga', 'Está lento ou travando', 'Problema na tela', 'Internet ou Wi-Fi', 'Quero fazer uma melhoria', 'Outro problema', 'Não sei explicar'],
@@ -11,16 +11,50 @@ let step = 0;
 const stepMascots = ['', 'equipamento', 'duvida', 'detalhes', 'atento', 'alegre'];
 const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
-// --- DATABASE MOCK (LocalStorage) ---
-function saveOS(osData) {
-  const osList = JSON.parse(localStorage.getItem('maprime_os_list') || '[]');
-  osList.push(osData);
-  localStorage.setItem('maprime_os_list', JSON.stringify(osList));
+import { db, collection, addDoc, getDocs, query, where } from './config.js';
+
+// --- DATABASE (Firebase Firestore) ---
+async function saveClient(clientData) {
+  try {
+    const q = query(collection(db, "clients"), where("phone", "==", clientData.phone));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      await addDoc(collection(db, "clients"), clientData);
+    }
+  } catch (e) {
+    console.error("Error saving client: ", e);
+  }
 }
-function getOS(protocol) {
-  const osList = JSON.parse(localStorage.getItem('maprime_os_list') || '[]');
-  return osList.find(os => os.protocol === protocol);
+
+// --- DATABASE (Firebase Firestore) ---
+async function saveOS(osData) {
+  try {
+    const docRef = await addDoc(collection(db, "os_list"), osData);
+    console.log("Document written with ID: ", docRef.id);
+  } catch (e) {
+    console.error("Error adding document: ", e);
+  }
 }
+
+async function getOS(protocol) {
+  const q = query(collection(db, "os_list"), where("protocol", "==", protocol));
+  const querySnapshot = await getDocs(q);
+  if (!querySnapshot.empty) {
+    return querySnapshot.docs[0].data();
+  }
+  return null;
+}
+
+async function getOSsByCPF(cpf) {
+  const q = query(collection(db, "os_list"), where("clientCpf", "==", cpf));
+  const querySnapshot = await getDocs(q);
+  const results = [];
+  querySnapshot.forEach(doc => {
+    results.push(doc.data());
+  });
+  return results;
+}
+
 function generateProtocol() {
   return 'OS-' + Math.floor(1000 + Math.random() * 9000);
 }
@@ -55,27 +89,69 @@ function renderTrack() {
         <button class="text-button" data-next="0">← Voltar</button>
       </div>
       <h2>Acompanhar atendimento</h2>
-      <p class="subtitle">Digite o número do seu Protocolo (Ex: OS-1234) para ver o status do seu aparelho.</p>
+      <p class="subtitle">Digite o número do seu Protocolo (Ex: OS-1234) ou CPF para ver o status do seu aparelho.</p>
       <form id="track-form" style="max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
-        <label class="field" for="protocol" style="text-align: left;">Número do Protocolo</label>
-        <input type="text" id="protocol" placeholder="Ex: OS-1234" required style="font-size: 18px; text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()">
+        <label class="field" for="protocol" style="text-align: left;">Protocolo ou CPF</label>
+        <input type="text" id="protocol" placeholder="OS-1234 ou 000.000.000-00" required style="font-size: 18px; text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()">
         <button class="primary" type="submit" style="margin-top: 10px;">Consultar Status</button>
       </form>
       <div id="track-result" style="margin-top: 30px;"></div>
     </section>
   `;
 
-  app.querySelector('#track-form').addEventListener('submit', (e) => {
+  app.querySelector('#track-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const protocol = document.querySelector('#protocol').value.trim().toUpperCase();
+    const queryVal = document.querySelector('#protocol').value.trim().toUpperCase();
     const resultDiv = document.querySelector('#track-result');
-    const osData = getOS(protocol);
-
-    if (!osData) {
-      resultDiv.innerHTML = `<div style="text-align:center; padding: 20px;"><img src="marca/variacoes/duvida.svg" width="80" style="margin-bottom:10px;"><p class="error" style="padding: 15px; background: #ffebeb; border-radius: 12px; color: #d32f2f;">Protocolo não encontrado. Verifique se digitou corretamente.</p></div>`;
-      return;
+    resultDiv.innerHTML = `<div style="text-align:center; padding: 20px;"><p style="color: var(--muted);">Buscando atendimento...</p></div>`;
+    
+    // Identificar se é CPF (apenas números e talvez -, .)
+    const isCpf = /^[0-9.-]{11,14}$/.test(queryVal);
+    
+    if (isCpf) {
+      const cpfDigits = queryVal.replace(/\D/g, '');
+      const osList = await getOSsByCPF(cpfDigits);
+      
+      if (!osList || osList.length === 0) {
+        resultDiv.innerHTML = `<div style="text-align:center; padding: 20px;"><img src="marca/variacoes/duvida.svg" width="80" style="margin-bottom:10px;"><p class="error" style="padding: 15px; background: #ffebeb; border-radius: 12px; color: #d32f2f;">Nenhum atendimento encontrado para este CPF.</p></div>`;
+        return;
+      }
+      
+      if (osList.length === 1) {
+        renderOSDetails(osList[0], resultDiv);
+      } else {
+        resultDiv.innerHTML = `
+          <h3 style="margin-bottom: 16px;">Atendimentos encontrados</h3>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            ${osList.map((os, i) => `
+              <div class="os-card" style="border:1px solid var(--line); border-radius:8px; padding:16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="window.showOSDetails(${i})">
+                <div>
+                  <strong style="color:var(--text);">${os.protocol}</strong>
+                  <p style="margin:4px 0 0 0; font-size:14px; color:var(--muted);">${os.device}</p>
+                </div>
+                <div style="text-align:right;">
+                  <span style="font-size:12px; font-weight:bold; color:var(--blue); text-transform:uppercase;">${os.status}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        window.osListData = osList;
+        window.showOSDetails = (index) => {
+          renderOSDetails(window.osListData[index], resultDiv);
+        };
+      }
+    } else {
+      const osData = await getOS(queryVal);
+      if (!osData) {
+        resultDiv.innerHTML = `<div style="text-align:center; padding: 20px;"><img src="marca/variacoes/duvida.svg" width="80" style="margin-bottom:10px;"><p class="error" style="padding: 15px; background: #ffebeb; border-radius: 12px; color: #d32f2f;">Protocolo não encontrado. Verifique se digitou corretamente.</p></div>`;
+        return;
+      }
+      renderOSDetails(osData, resultDiv);
     }
+  });
 
+  function renderOSDetails(osData, resultDiv) {
     const timelineSteps = ['Aberto', 'Em Análise', 'Orçamento Enviado', 'Em Reparo', 'Finalizado'];
     const isCancelled = osData.status === 'Cancelado';
     const currentIndex = timelineSteps.indexOf(osData.status);
@@ -98,7 +174,14 @@ function renderTrack() {
         `).join('')}
       </div>`;
     
+    const budgetHTML = (osData.budget && currentIndex >= 2) ? 
+      `<div style="margin-top: 16px; padding: 16px; background: var(--surface); border-radius: 8px; border: 1px dashed var(--blue);">
+        <span style="font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: bold;">Valor do Orçamento</span>
+        <h4 style="margin: 4px 0 0 0; font-size: 18px; color: var(--green);">R$ ${parseFloat(osData.budget).toFixed(2).replace('.', ',')}</h4>
+      </div>` : '';
+
     resultDiv.innerHTML = `
+      ${window.osListData && window.osListData.length > 1 ? '<button class="text-button" style="margin-bottom: 16px;" onclick="document.querySelector(\'#track-form\').dispatchEvent(new Event(\'submit\'))">← Voltar para a lista</button>' : ''}
       <div class="summary" style="border: 1px solid var(--line); padding: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div>
@@ -112,6 +195,7 @@ function renderTrack() {
         </div>
         
         <p style="margin: 16px 0 0 0; color: var(--muted); font-size: 14px;"><strong>Equipamento:</strong> ${osData.device} - ${osData.problem}</p>
+        ${budgetHTML}
         
         <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line);">
           <span style="font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Acompanhamento</span>
@@ -119,7 +203,8 @@ function renderTrack() {
         </div>
       </div>
     `;
-  });
+  }
+
 
   app.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', () => {
     const next = button.dataset.next;
@@ -134,23 +219,16 @@ function render() {
   }
 
   if (!step) {
-    app.innerHTML = `<section class="hero">
-      <div>
-        <div class="eyebrow">SUA TECNOLOGIA, EM BOAS MÃOS</div>
-        <h1>Deu problema?<br><span>Vamos resolver.</span></h1>
-        <p class="lead">Conte o que aconteceu com seu equipamento. A gente cuida do próximo passo com você.</p>
-        <div style="display:flex; gap:12px; margin-top:22px; flex-wrap:wrap">
-          <button class="primary" style="margin-top:0" data-next="1">Iniciar atendimento <span aria-hidden="true">↗</span></button>
-          <button class="text-button" style="border:1px solid var(--line); border-radius:99px; padding:15px 26px; color:var(--text); font-weight:600" data-next="track">Acompanhar OS</button>
+    app.innerHTML = `<section class="hero" style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; text-align: center;">
+      <div style="max-width: 600px; width: 100%;">
+        <div class="eyebrow" style="justify-content: center; margin-bottom: 20px;">SUA TECNOLOGIA, EM BOAS MÃOS</div>
+        <h1 style="text-align: center; margin-bottom: 24px;">Deu problema?<br><span>Vamos resolver.</span></h1>
+        <p class="lead" style="text-align: center; margin-bottom: 40px; font-size: 18px;">Conte o que aconteceu com seu equipamento. A gente cuida do próximo passo com você.</p>
+        <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+          <button class="primary" style="padding:15px 40px; font-size:18px; min-width: 260px;" data-next="1">Novo atendimento</button>
+          <button class="text-button" style="border:1px solid var(--line); border-radius:99px; padding:15px 26px; color:var(--text); font-weight:600; min-width: 260px;" data-next="track">Acompanhar atendimento</button>
         </div>
-        <p class="micro" style="margin-top:17px">Algumas perguntas. Depois, uma conversa no WhatsApp.</p>
-      </div>
-      <div class="portrait">
-        <span class="hello">Oi! Vamos começar?</span>
-        <i class="pixel" aria-hidden="true"></i>
-        <div class="mascot"><img src="marca/variacoes/equipamento.svg" alt="Mascote da MA PRIME TEC apresentando um notebook"></div>
-        <i class="pixel two" aria-hidden="true"></i>
-        <span class="caption">Tecnologia tem solução. E tem quem cuide.</span>
+        <p class="micro" style="margin-top:24px;">Algumas perguntas. Depois, uma conversa no WhatsApp.</p>
       </div>
     </section>
     <div class="steps-strip">
@@ -166,9 +244,9 @@ function render() {
     if (step === 1) content = choices(devices, 'device');
     if (step === 2) content = choices(problems[state.device === 'Impressora' ? 'printer' : state.device === 'Outro equipamento' ? 'other' : 'computer'], 'problem');
     if (step === 3) content = `<label class="field" for="model">Marca e modelo <small>· opcional</small></label><input id="model" name="model" maxlength="100" value="${escapeHTML(state.model)}" placeholder="Ex.: Dell Inspiron 15"><label class="field" for="details">O que mais você percebeu? <small>· opcional</small></label><textarea id="details" name="details" maxlength="600" placeholder="Quando começou? Aparece alguma mensagem?">${escapeHTML(state.details)}</textarea><p class="micro">Não inclua senhas ou outras informações sensíveis.</p>`;
-    if (step === 4) content = `<label class="field" for="name">Seu nome</label><input id="name" name="name" autocomplete="name" maxlength="80" required value="${escapeHTML(state.name)}" placeholder="Como você prefere ser chamado?"><p class="micro">A conversa continua pelo seu WhatsApp. Não precisamos pedir seu telefone aqui.</p>`;
+    if (step === 4) content = `<label class="field" for="name">Seu nome</label><input id="name" name="name" autocomplete="name" maxlength="80" required value="${escapeHTML(state.name)}" placeholder="Como você prefere ser chamado?"><label class="field" for="phone" style="margin-top:20px;">Seu WhatsApp</label><input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="20" required value="${escapeHTML(state.phone)}" placeholder="(21) 90000-0000"><p class="micro">Usaremos este número apenas para enviar atualizações sobre o seu aparelho.</p><input type="text" id="bot_field" name="bot_field" style="display:none" tabindex="-1" autocomplete="off">`;
     if (step === 5) {
-      const rows = [['Nome', state.name, 4], ['Equipamento', state.device, 1], ['Problema', state.problem, 2], ['Marca e modelo', state.model || 'Não informado', 3], ['Detalhes', state.details || 'Nenhum detalhe adicional', 3]];
+      const rows = [['Nome', state.name, 4], ['WhatsApp', state.phone, 4], ['Equipamento', state.device, 1], ['Problema', state.problem, 2], ['Marca e modelo', state.model || 'Não informado', 3], ['Detalhes', state.details || 'Nenhum detalhe adicional', 3]];
       content = `<dl class="summary">${rows.map(([label, value, target]) => `<div class="summary-row"><dt>${label}</dt><dd>${escapeHTML(value)}</dd><button type="button" class="text-button" data-next="${target}" aria-label="Editar ${label.toLowerCase()}">Editar</button></div>`).join('')}</dl><p class="notice">Ao continuar, um número de Protocolo será gerado e enviaremos seu resumo para nosso WhatsApp.</p>`;
     }
     
@@ -201,12 +279,24 @@ function render() {
     if (step < 5) {
       app.querySelector('form').addEventListener('submit', event => {
         event.preventDefault();
-        if (step === 4 && !state.name.trim()) { 
-          document.querySelector('#name').setCustomValidity('Digite seu nome para continuar.'); 
-          document.querySelector('#name').reportValidity(); 
-          return; 
+        if (step === 4) {
+          const botField = document.querySelector('#bot_field');
+          if (botField && botField.value !== '') {
+            // Se o honeypot foi preenchido, paramos a execução silenciosamente
+            return;
+          }
+          if (!state.name.trim()) { 
+            document.querySelector('#name').setCustomValidity('Digite seu nome para continuar.'); 
+            document.querySelector('#name').reportValidity(); 
+            return; 
+          }
+          if (!state.phone.trim()) {
+            document.querySelector('#phone').setCustomValidity('Digite seu WhatsApp para continuar.');
+            document.querySelector('#phone').reportValidity();
+            return;
+          }
         }
-        state.name = state.name.trim(); state.model = state.model.trim(); state.details = state.details.trim();
+        state.name = state.name.trim(); state.phone = state.phone.trim(); state.model = state.model.trim(); state.details = state.details.trim();
         navigate(step + 1);
       });
     }
@@ -225,21 +315,24 @@ function render() {
     }));
     
     // Final WhatsApp Action
-    app.querySelector('#whatsapp-btn')?.addEventListener('click', () => {
+    app.querySelector('#whatsapp-btn')?.addEventListener('click', async () => {
       // Create OS
       const protocol = generateProtocol();
       const osData = {
         protocol,
         client: state.name,
+        phone: state.phone,
         device: state.device,
         model: state.model,
         problem: state.problem,
         details: state.details,
         status: 'Aberto',
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        history: [{ date: new Date().toISOString(), action: 'OS Criada', note: 'OS gerada pelo site público.' }]
       };
-      saveOS(osData);
+      await saveClient({ name: state.name, phone: state.phone, createdAt: new Date().toISOString() });
+      await saveOS(osData);
 
       // Open WhatsApp
       const text = summaryText(protocol);
@@ -259,10 +352,13 @@ function render() {
     app.querySelector('#copy')?.addEventListener('click', async () => {
       const status = document.querySelector('#status');
       const protocol = generateProtocol();
-      saveOS({
-        protocol, client: state.name, device: state.device, model: state.model, problem: state.problem,
-        details: state.details, status: 'Aberto', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-      });
+      const osData = {
+        protocol, client: state.name, phone: state.phone, device: state.device, model: state.model, problem: state.problem,
+        details: state.details, status: 'Aberto', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        history: [{ date: new Date().toISOString(), action: 'OS Criada', note: 'OS gerada pelo site público.' }]
+      };
+      await saveClient({ name: state.name, phone: state.phone, createdAt: new Date().toISOString() });
+      await saveOS(osData);
       try { 
         await navigator.clipboard.writeText(summaryText(protocol)); 
         status.textContent = `Resumo copiado (Protocolo: ${protocol}). Cole na conversa.`; 
