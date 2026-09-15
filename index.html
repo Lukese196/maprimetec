@@ -10,12 +10,16 @@
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar" style="view-transition-name: topbar;">
     <a class="brand" href="#inicio" aria-label="MA PRIME TEC — início"><span class="brand-icon" aria-hidden="true">m<span>+</span></span><span>MA PRIME <b>TEC</b><small>ASSISTÊNCIA DE INFORMÁTICA</small></span></a>
     <button id="theme" class="theme-button" type="button" aria-label="Ativar tema escuro"></button>
   </header>
+  <div id="progress" class="progress-container" style="opacity: 0; visibility: hidden; transition: opacity var(--d-in) var(--ease), visibility var(--d-in) var(--ease); view-transition-name: progress;">
+    <div class="progress-track" aria-hidden="true"><div id="progress-bar" class="progress-fill"></div></div>
+    <div id="progress-label" class="progress-label"></div>
+  </div>
   <main id="app"></main>
   <noscript><p class="noscript">Ative o JavaScript para responder às perguntas da triagem.</p></noscript>
-  <footer><span>MA PRIME TEC</span><span>Tecnologia com cuidado humano.</span><div class="pixel-line" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div></footer>
+  <footer><span>MA PRIME TEC</span><span>Tecnologia com cuidado humano.</span></footer>
 </body>
 </html>

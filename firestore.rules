@@ -5,7 +5,10 @@ service cloud.firestore {
 
     // Function to check if user is authenticated (admin)
     function isAdmin() {
-      return request.auth != null;
+      return request.auth != null && (
+        request.auth.token.email == 'loliver242@gmail.com' ||
+        request.auth.token.email == 'marcus190373@gmail.com'
+      );
     }
 
     match /clients/{phone} {

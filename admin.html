@@ -2,747 +2,289 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel Admin - MA PRIME TEC</title>
-  <link rel="stylesheet" href="styles.css">
-  <style>
-    body { background: var(--surface); }
-    .admin-container {
-      max-width: 1200px;
-      margin: 40px auto;
-      padding: 0 20px;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 40px;
-    }
-    .card {
-      background: var(--bg);
-      border-radius: 20px;
-      padding: 30px;
-      border: 1px solid var(--line);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-    }
-    .os-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-    .os-table th {
-      padding: 16px;
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      border-bottom: 1px solid var(--line);
-    }
-    .os-table td {
-      padding: 16px;
-      border-bottom: 1px solid var(--line);
-      font-size: 14px;
-      vertical-align: top;
-    }
-    .os-table tr:hover {
-      background: var(--surface);
-    }
-    .os-table tr:last-child td { border-bottom: none; }
-    
-    .status-badge {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 99px;
-      font-size: 12px;
-      font-weight: 600;
-      color: white;
-    }
-
-    #login-screen {
-      max-width: 400px;
-      margin: 100px auto;
-      text-align: center;
-    }
-
-    /* Modals */
-    .modal-backdrop {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(4px);
-      display: flex; justify-content: center; align-items: center;
-      z-index: 100;
-      opacity: 1;
-      transition: opacity 0.2s;
-    }
-    .modal {
-      background: var(--bg);
-      border-radius: 24px;
-      width: 100%;
-      max-width: 550px;
-      padding: 40px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-      transform: translateY(0);
-      transition: transform 0.2s;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    .modal h3 { margin-top: 0; font-size: 24px; }
-    .hidden { display: none !important; opacity: 0; pointer-events: none; }
-    .modal-backdrop.hidden .modal { transform: translateY(20px); }
-
-    .filter-bar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-    .filter-btn {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      padding: 8px 16px;
-      border-radius: 99px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .filter-btn.active {
-      background: var(--blue);
-      color: white;
-      border-color: var(--blue);
-    }
-    
-    .tab {
-      background: none; border: none; padding: 10px 20px; font-size: 16px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
-    }
-    .tab:hover { color: var(--text); }
-    .tab.active {
-      color: var(--text); border-bottom-color: var(--blue);
-    }
-    .tab-content.hidden { display: none !important; }
-
-    .mascot-login {
-      width: 100px;
-      height: 100px;
-      margin: 0 auto 20px;
-      background: var(--surface);
-      border-radius: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .history-item {
-      padding-left: 16px;
-      border-left: 2px solid var(--line);
-      margin-bottom: 12px;
-      position: relative;
-    }
-    .history-item::before {
-      content: '';
-      position: absolute; left: -5px; top: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--blue);
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Admin - MA PRIME TEC</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="admin.css">
+  <script>
+    const savedTheme = localStorage.getItem('mpt-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+    document.documentElement.dataset.theme = theme;
+  </script>
 </head>
 <body>
 
-  <div id="login-screen" class="card">
-    <div class="mascot-login">
-      <img src="marca/variacoes/atento.svg" alt="Admin" style="width: 80px;">
-    </div>
-    <h2 style="margin-top: 0;">Acesso Restrito</h2>
-    <p class="subtitle">Área de gerenciamento técnico</p>
-    <div style="margin-top: 30px;">
-      <button type="button" class="primary" id="google-login-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: white; color: #333; border: 1px solid var(--line);">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px;">
+  <!-- Login Screen -->
+  <div id="login-screen" class="u-wrapper" style="display:flex; justify-content:center; align-items:center; min-height:100vh;">
+    <div class="card" style="max-width:400px; text-align:center; padding:var(--s6) var(--s5);">
+      <h2 style="margin:0 0 var(--s2) 0;">Acesso Restrito</h2>
+      <p class="subtitle" style="margin-bottom:var(--s6);">Área de gerenciamento técnico</p>
+      
+      <button type="button" class="btn primary" id="google-login-btn" style="width:100%; display:flex; justify-content:center; gap:var(--s2); background:var(--text); color:var(--bg);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
         Entrar com Google
       </button>
+      
+      <p class="micro u-hidden" id="login-error" style="color:var(--danger); margin-top:var(--s4);"></p>
     </div>
-    <p class="micro" style="margin-top: 20px;" id="login-error"></p>
   </div>
 
-  <div id="dashboard" class="admin-container hidden">
-    <div class="header">
-      <div>
-        <a class="brand" href="/" aria-label="Voltar ao site">
+  <!-- Dashboard -->
+  <div id="dashboard" hidden>
+    <!-- Header Admin -->
+    <header class="header-admin">
+      <div class="header-admin-inner">
+        <a class="brand" href="/" aria-label="Voltar ao site" style="text-decoration:none;">
           <span class="brand-icon">m<span>+</span></span>
-          <span>MA PRIME <b>TEC</b><small>PAINEL ADMIN</small></span>
+          <span style="font-weight:700; color:var(--text); line-height:1.2;">
+            MA PRIME <b>TEC</b><br>
+            <small style="font-weight:500; font-size:10px; letter-spacing:1px; color:var(--blue);">PAINEL ADMIN</small>
+          </span>
         </a>
-      </div>
-      <div style="display: flex; align-items: center; gap: 16px;">
-        <span class="micro">Bem-vindo, Administrador</span>
-        <button class="text-button" id="logout" style="min-height: auto; padding: 8px 16px; border: 1px solid var(--line); border-radius: 99px;">Sair</button>
-      </div>
-    </div>
-
-    <div class="tabs" style="display: flex; gap: 20px; margin-bottom: 30px; border-bottom: 1px solid var(--line);">
-      <button class="tab active" data-target="tab-os">Ordens de Serviço</button>
-      <button class="tab" data-target="tab-clients">Clientes</button>
-    </div>
-
-    <div id="tab-os" class="card tab-content">
-      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 20px;">
-        <div style="display:flex; align-items: center; gap: 16px;">
-          <h2 style="margin: 0; font-size: 28px;">Ordens de Serviço</h2>
-          <button class="primary" id="btn-new-os" style="padding: 8px 16px; font-size: 14px; min-height: auto;">+ Nova OS</button>
-        </div>
         
+        <div style="display:flex; align-items:center; gap:var(--s3);">
+          <button id="theme-toggle" class="btn secondary" style="min-height:44px; width:44px; padding:0; display:flex; justify-content:center; align-items:center;" aria-label="Alternar tema" aria-pressed="false">☀️</button>
+          <button id="logout" class="btn secondary" style="min-height:44px;">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="u-wrapper" style="padding-top:var(--s4); padding-bottom:var(--s6);">
+      
+      <!-- Tabs -->
+      <div class="tab-list" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-target="tab-os">Ordens de serviço</button>
+        <button class="tab" role="tab" aria-selected="false" data-target="tab-clients">Clientes</button>
+      </div>
+
+      <!-- Tab Content: OS -->
+      <div id="tab-os" class="card tab-content" role="tabpanel">
         <div class="filter-bar">
-          <button class="filter-btn active" data-filter="all">Todas</button>
-          <button class="filter-btn" data-filter="Aberto">Abertas</button>
-          <button class="filter-btn" data-filter="Em Reparo">Em Reparo</button>
-          <button class="filter-btn" data-filter="Finalizado">Finalizadas</button>
+          <h2 style="margin:0; font-size:24px;">Ordens de serviço</h2>
+          <button class="btn primary" id="btn-new-os" data-open="new-os-modal">+ Nova OS</button>
+        </div>
+        
+        <!-- Search and Filters -->
+        <div style="display:flex; flex-direction:column; gap:var(--s3); margin-bottom:var(--s5);">
+          <!-- Search -->
+          <div style="position:relative; width:100%; max-width:400px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute; left:16px; top:14px; color:var(--muted);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="search" id="search-input" placeholder="Buscar por protocolo, cliente ou telefone..." style="width:100%; padding:14px 16px 14px 44px; border-radius:var(--r-pill); border:1px solid var(--line); background:var(--surface); color:var(--text); font-size:16px;">
+            <div id="search-announcer" aria-live="polite" class="u-sr-only"></div>
+          </div>
+          
+          <!-- Filters -->
+          <div style="display:flex; gap:var(--s2); overflow-x:auto; padding-bottom:var(--s1); scrollbar-width:none;">
+            <button class="filter-btn" aria-pressed="true" data-filter="all">Todas <span class="count">0</span></button>
+            <button class="filter-btn" aria-pressed="false" data-filter="Aberto">Abertas <span class="count">0</span></button>
+            <button class="filter-btn" aria-pressed="false" data-filter="Em Reparo">Em Reparo <span class="count">0</span></button>
+            <button class="filter-btn" aria-pressed="false" data-filter="Finalizado">Finalizadas <span class="count">0</span></button>
+          </div>
+        </div>
+
+        <div id="os-list-container">
+          <!-- Table injected via JS -->
+          <div class="empty-state"><div class="spinner"></div><p>Carregando...</p></div>
         </div>
       </div>
       
-      <div style="overflow-x: auto;">
-        <table class="os-table">
-          <thead>
-            <tr>
-              <th>Protocolo</th>
-              <th>Cliente</th>
-              <th>Equipamento</th>
-              <th>Status</th>
-              <th>Atualização</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="os-list">
-            <!-- OS rows -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-    
-    <div id="tab-clients" class="card tab-content hidden">
-      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <div style="display:flex; align-items: center; gap: 16px;">
-          <h2 style="margin: 0; font-size: 28px;">Clientes</h2>
-          <button class="primary" id="btn-new-client" style="padding: 8px 16px; font-size: 14px; min-height: auto;">+ Novo Cliente</button>
+      <!-- Tab Content: Clients -->
+      <div id="tab-clients" class="card tab-content" role="tabpanel" hidden>
+        <div class="filter-bar">
+          <h2 style="margin:0; font-size:24px;">Clientes</h2>
+          <button class="btn primary" id="btn-new-client" data-open="new-client-modal">+ Novo Cliente</button>
+        </div>
+        
+        <div id="client-list">
+          <div class="empty-state"><div class="spinner"></div><p>Carregando...</p></div>
         </div>
       </div>
-      <div style="overflow-x: auto;">
-        <table class="os-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>WhatsApp</th>
-              <th>Cadastrado em</th>
-            </tr>
-          </thead>
-          <tbody id="client-list">
-          </tbody>
-        </table>
+      
+    </div>
+  </div>
+
+  <!-- Modal: Edit OS -->
+  <div id="edit-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-protocol">
+      
+      <div class="modal-header">
+        <h3 style="margin:0; font-size:20px;">OS <span id="modal-protocol" style="color:var(--blue);"></span></h3>
+        <button class="btn text-button" data-close="edit-modal" aria-label="Fechar modal" style="min-height:44px; width:44px; font-size:24px; padding:0; display:flex; justify-content:center; align-items:center;">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        
+        <!-- Info Grid -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--s4); background:var(--surface); padding:var(--s4); border-radius:var(--r-card); margin-bottom:var(--s5);">
+          <div style="grid-column:1/-1; display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <span class="micro" style="color:var(--muted); margin-bottom:var(--s1); display:block;">Cliente</span>
+              <strong id="modal-client" style="font-size:16px;"></strong>
+            </div>
+            <button type="button" class="btn primary" id="modal-whatsapp-btn" style="background:var(--green); min-height:44px; padding:0 12px; font-size:13px; border-radius:var(--r-pill);">
+              WhatsApp ↗
+            </button>
+          </div>
+          <div>
+            <span class="micro" style="color:var(--muted); margin-bottom:var(--s1); display:block;">Equipamento</span>
+            <strong id="modal-device"></strong>
+          </div>
+          <div>
+            <span class="micro" style="color:var(--muted); margin-bottom:var(--s1); display:block;">Telefone</span>
+            <strong id="modal-phone"></strong>
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <span class="micro" style="color:var(--muted); margin-bottom:var(--s1); display:block;">Problema relatado</span>
+            <span id="modal-problem" style="line-height:1.5;"></span>
+          </div>
+        </div>
+
+        <form id="edit-form">
+          <!-- Status Picker -->
+          <div style="margin-bottom:var(--s5);">
+            <label class="field" style="margin-bottom:var(--s2); font-weight:600;">Status da ordem</label>
+            <input type="hidden" id="status-hidden-input" name="status">
+            <div class="status-picker">
+              <button type="button" class="status-option" data-value="Aberto" aria-checked="false">Aberto</button>
+              <button type="button" class="status-option" data-value="Em Análise" aria-checked="false">Em Análise</button>
+              <button type="button" class="status-option" data-value="Orçamento Enviado" aria-checked="false">Orçamento</button>
+              <button type="button" class="status-option" data-value="Em Reparo" aria-checked="false">Em Reparo</button>
+              <button type="button" class="status-option" data-value="Finalizado" aria-checked="false">Finalizado</button>
+            </div>
+          </div>
+          
+          <div style="margin-bottom:var(--s5);">
+            <label class="field">Valor do orçamento (R$)</label>
+            <input type="number" step="0.01" id="os-budget" placeholder="0.00">
+          </div>
+          
+          <div style="margin-bottom:var(--s5);">
+            <label class="field">Adicionar nota interna (Opcional)</label>
+            <textarea id="os-notes" placeholder="Ex: Peça encomendada..." style="min-height:100px;"></textarea>
+          </div>
+          
+          <!-- History -->
+          <div style="margin-bottom:var(--s5);">
+            <h4 style="margin:0 0 var(--s3) 0; font-size:14px;">Histórico</h4>
+            <div id="modal-history" style="background:var(--surface); padding:var(--s3) var(--s4); border-radius:var(--r-card); max-height:200px; overflow-y:auto;">
+              <!-- history items -->
+            </div>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" class="btn secondary" data-close="edit-modal">Voltar</button>
+            <div style="display:flex; gap:var(--s2);">
+              <button type="button" class="btn secondary" style="background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger-bg);" onclick="window.confirmCancel()">Cancelar OS</button>
+              <button type="submit" class="btn primary">Salvar alterações</button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 
-  <div id="edit-modal" class="modal-backdrop hidden">
-    <div class="modal" id="modal-content">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h3>OS <span id="modal-protocol" style="color: var(--blue);"></span></h3>
-        <button class="text-button" id="close-modal-x" style="min-height:auto; font-size:24px; padding:0;">×</button>
+  <!-- Modal: Nova OS -->
+  <div id="new-os-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="new-os-title">
+      <div class="modal-header">
+        <h3 id="new-os-title" style="margin:0; font-size:20px;">Nova ordem de serviço</h3>
+        <button class="btn text-button" data-close="new-os-modal" aria-label="Fechar" style="min-height:44px; width:44px; font-size:24px; padding:0;">&times;</button>
       </div>
-      
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; font-size: 14px; background: var(--surface); padding: 20px; border-radius: 16px;">
-        <div>
-          <span style="color: var(--muted); display: block; font-size: 12px;">Cliente</span>
-          <strong id="modal-client"></strong>
-        </div>
-        <div>
-          <span style="color: var(--muted); display: block; font-size: 12px;">Equipamento</span>
-          <strong id="modal-device"></strong>
-        </div>
-        <div>
-          <span style="color: var(--muted); display: block; font-size: 12px;">Telefone (WhatsApp)</span>
-          <strong id="modal-phone"></strong>
-        </div>
-        <div>
-          <span style="color: var(--muted); display: block; font-size: 12px;">Notificar Cliente</span>
-          <button type="button" class="primary whatsapp" id="modal-whatsapp-btn" style="background: var(--green); padding: 6px 12px; font-size: 12px; min-height: auto; margin-top: 4px;">Mensagem ↗</button>
-        </div>
-        <div style="grid-column: 1 / -1;">
-          <span style="color: var(--muted); display: block; font-size: 12px;">Problema Relatado</span>
-          <span id="modal-problem"></span>
-        </div>
-      </div>
-
-      <div style="margin-bottom: 24px;">
-        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Histórico da OS</h4>
-        <div id="modal-history" style="background: var(--surface); padding: 16px; border-radius: 12px; max-height: 200px; overflow-y: auto; font-size: 13px;">
-          <!-- history items -->
-        </div>
-      </div>
-
-      <form id="edit-form">
-        <label class="field">Status da Ordem</label>
-        <select id="os-status" style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:16px; cursor: pointer;">
-          <option value="Aberto">Aberto</option>
-          <option value="Em Análise">Em Análise</option>
-          <option value="Orçamento Enviado">Orçamento Enviado</option>
-          <option value="Em Reparo">Em Reparo</option>
-          <option value="Finalizado">Finalizado</option>
-          <option value="Cancelado">Cancelado</option>
-        </select>
-        
-        <div style="margin-top: 16px;">
-          <label class="field">Valor do Orçamento (R$)</label>
-          <input type="number" step="0.01" id="os-budget" placeholder="0.00" style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:16px;">
-        </div>
-        
-        <label class="field" style="margin-top: 16px;">Adicionar Nota Interna (Opcional)</label>
-        <textarea id="os-notes" style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:14px; resize:vertical; min-height:80px;" placeholder="Ex: Peça encomendada..."></textarea>
-        
-        <div style="display:flex; gap:12px; margin-top:24px;">
-          <button type="button" class="secondary" id="close-modal" style="flex:1">Cancelar</button>
-          <button type="submit" class="primary" style="flex:1">Salvar Alterações</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div id="new-os-modal" class="modal-backdrop hidden">
-    <div class="card modal-content" style="max-width: 600px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-        <h3 style="margin:0; font-size: 24px;">Abrir Nova OS</h3>
-        <button id="close-new-os-x" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--muted);">&times;</button>
-      </div>
-      
-      <form id="new-os-form">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div style="grid-column: 1 / -1; display:flex; align-items:flex-end; gap:12px;">
+      <div class="modal-body">
+        <form id="new-os-form">
+          
+          <div style="display:flex; gap:var(--s2); align-items:flex-end; margin-bottom:var(--s4);">
             <div style="flex:1;">
               <label class="field">Cliente *</label>
-              <select id="new-os-client-select" required style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:16px;">
+              <select id="new-os-client-select" required>
                 <option value="">Selecione um cliente</option>
               </select>
             </div>
-            <button type="button" class="text-button" id="btn-new-client-from-os" style="padding: 16px; border: 1px solid var(--blue); border-radius: 14px; color: var(--blue);">+ Novo Cliente</button>
+            <button type="button" class="btn secondary" data-open="new-client-modal" style="padding:0 var(--s3); font-size:20px; font-weight:400;" title="Novo Cliente" aria-label="Novo Cliente">+</button>
           </div>
-          <div>
-            <label class="field">Equipamento *</label>
-            <select id="new-device" required style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:16px;">
-              <option value="Notebook">Notebook</option>
-              <option value="Computador">Computador</option>
-              <option value="Impressora">Impressora</option>
-              <option value="Outro">Outro</option>
-            </select>
+          
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--s4); margin-bottom:var(--s4);">
+            <div>
+              <label class="field">Equipamento *</label>
+              <select id="new-device" required>
+                <option value="Notebook">Notebook</option>
+                <option value="Computador">Computador</option>
+                <option value="Impressora">Impressora</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div>
+              <label class="field">Modelo/Marca</label>
+              <input type="text" id="new-model" placeholder="Opcional">
+            </div>
           </div>
-          <div>
-            <label class="field">Modelo/Marca</label>
-            <input type="text" id="new-model" placeholder="Opcional">
+          
+          <div style="margin-bottom:var(--s5);">
+            <label class="field">Problema relatado *</label>
+            <textarea id="new-problem" required placeholder="Descreva o problema da máquina..." style="min-height:100px;"></textarea>
           </div>
-          <div style="grid-column: 1 / -1;">
-            <label class="field">Problema Relatado *</label>
-            <textarea id="new-problem" required style="width:100%; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:14px; min-height:80px;" placeholder="Descreva o problema da máquina..."></textarea>
+          
+          <div class="modal-actions" style="justify-content:flex-end;">
+            <button type="button" class="btn secondary" data-close="new-os-modal">Cancelar</button>
+            <button type="submit" class="btn primary">Criar OS</button>
           </div>
-        </div>
-        
-        <div style="display:flex; gap:12px; margin-top:24px;">
-          <button type="button" class="secondary" id="close-new-os" style="flex:1">Cancelar</button>
-          <button type="submit" class="primary" style="flex:1">Criar OS e Cliente</button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
-  <div id="new-client-modal" class="modal-backdrop hidden">
-    <div class="card modal-content modal" style="max-width: 600px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-        <h3 style="margin:0; font-size: 24px;">Novo Cliente</h3>
-        <button id="close-new-client-x" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--muted);">&times;</button>
+  <!-- Modal: Novo Cliente -->
+  <div id="new-client-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="new-client-title">
+      <div class="modal-header">
+        <h3 id="new-client-title" style="margin:0; font-size:20px;">Novo cliente</h3>
+        <button class="btn text-button" data-close="new-client-modal" aria-label="Fechar" style="min-height:44px; width:44px; font-size:24px; padding:0;">&times;</button>
       </div>
-      
-      <form id="new-client-form">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div style="grid-column: 1 / -1;">
-            <label class="field">Nome Completo *</label>
+      <div class="modal-body">
+        <form id="new-client-form">
+          <div style="margin-bottom:var(--s4);">
+            <label class="field">Nome completo *</label>
             <input type="text" id="new-cli-name" required placeholder="Ex: João Silva">
           </div>
-          <div>
-            <label class="field">CPF / CNPJ *</label>
-            <input type="text" id="new-cli-cpf" required placeholder="Apenas números" oninput="this.value = this.value.replace(/\\D/g, '')">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--s4); margin-bottom:var(--s4);">
+            <div>
+              <label class="field">CPF / CNPJ *</label>
+              <input type="text" id="new-cli-cpf" required placeholder="Apenas números" oninput="this.value = this.value.replace(/\D/g, '')">
+            </div>
+            <div>
+              <label class="field">WhatsApp *</label>
+              <input type="tel" id="new-cli-phone" required placeholder="DDD + Número">
+            </div>
           </div>
-          <div>
-            <label class="field">WhatsApp *</label>
-            <input type="tel" id="new-cli-phone" required placeholder="DDD + Número">
-          </div>
-          <div style="grid-column: 1 / -1;">
+          <div style="margin-bottom:var(--s4);">
             <label class="field">Endereço</label>
             <input type="text" id="new-cli-address" placeholder="Rua, número, bairro">
           </div>
-          <div style="grid-column: 1 / -1;">
+          <div style="margin-bottom:var(--s5);">
             <label class="field">E-mail</label>
             <input type="email" id="new-cli-email" placeholder="cliente@email.com">
           </div>
-        </div>
-        
-        <div style="display:flex; gap:12px; margin-top:24px;">
-          <button type="button" class="secondary" id="close-new-client" style="flex:1">Cancelar</button>
-          <button type="submit" class="primary" style="flex:1">Salvar Cliente</button>
-        </div>
-      </form>
+          
+          <div class="modal-actions" style="justify-content:flex-end;">
+            <button type="button" class="btn secondary" data-close="new-client-modal">Cancelar</button>
+            <button type="submit" class="btn primary">Salvar cliente</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
-  <script type="module">
-    import { db, auth, collection, onSnapshot, doc, updateDoc, query, orderBy, addDoc, setDoc, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from './config.js';
-
-    let currentOS = null;
-    let osDataList = [];
-    let clientDataList = [];
-    let activeFilter = 'all';
-    
-    // Security (Rule 15): Escape de Conteúdo HTML
-    const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-
-    const statusColors = {
-      'Aberto': 'var(--blue)',
-      'Em Análise': '#f59e0b',
-      'Orçamento Enviado': '#8b5cf6',
-      'Em Reparo': '#3b82f6',
-      'Finalizado': 'var(--green)',
-      'Cancelado': '#ef4444'
-    };
-
-    const loginScreen = document.getElementById('login-screen');
-    const dashboard = document.getElementById('dashboard');
-    const loginError = document.getElementById('login-error');
-    
-    // Autenticação no lado do servidor (Regra 6 e 9)
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loginScreen.classList.add('hidden');
-        dashboard.classList.remove('hidden');
-        loadOS();
-        loadClients();
-      } else {
-        loginScreen.classList.remove('hidden');
-        dashboard.classList.add('hidden');
-      }
-    });
-
-    document.getElementById('google-login-btn').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('google-login-btn');
-      
-      try {
-        btn.disabled = true;
-        btn.innerHTML = 'Autenticando...';
-        loginError.textContent = '';
-        loginError.style.color = 'var(--text)';
-        
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
-        // onAuthStateChanged takes care of the UI transition
-      } catch (err) {
-        console.error("ERRO LOGIN GOOGLE:", err);
-        alert("Erro no login: " + err.message); // Added alert to ensure visibility
-        loginError.textContent = 'Falha: ' + err.message;
-        loginError.style.color = '#ef4444';
-        
-        btn.disabled = false;
-        btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px;"> Entrar com Google`;
-      }
-    });
-
-    document.getElementById('logout').addEventListener('click', async () => {
-      await signOut(auth);
-    });
-
-    // Filtering
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        activeFilter = e.target.dataset.filter;
-        renderTable();
-      });
-    });
-
-    // Tabs
-    document.querySelectorAll('.tab').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-        document.getElementById(e.target.dataset.target).classList.remove('hidden');
-      });
-    });
-
-    function loadClients() {
-      const q = query(collection(db, "clients"), orderBy("createdAt", "desc"));
-      onSnapshot(q, (snapshot) => {
-        clientDataList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderClients();
-      });
-    }
-
-    function renderClients() {
-      const tbody = document.getElementById('client-list');
-      if (clientDataList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 40px; color: var(--muted);">Nenhum cliente cadastrado.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = clientDataList.map(c => `
-        <tr>
-          <td><strong style="color:var(--text);">${escapeHTML(c.name)}</strong></td>
-          <td>${escapeHTML(c.phone)}</td>
-          <td style="color:var(--muted);">${new Date(c.createdAt).toLocaleDateString('pt-BR')}</td>
-        </tr>
-      `).join('');
-      
-      const osClientSelect = document.getElementById('new-os-client-select');
-      if (osClientSelect) {
-        osClientSelect.innerHTML = '<option value="">Selecione um cliente</option>' + clientDataList.map(c => `
-          <option value="${escapeHTML(c.id)}">${escapeHTML(c.name)} (${escapeHTML(c.cpf || 'Sem CPF')})</option>
-        `).join('');
-      }
-    }
-
-    function loadOS() {
-      const q = query(collection(db, "os_list"), orderBy("createdAt", "desc"));
-      onSnapshot(q, (snapshot) => {
-        osDataList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderTable();
-      });
-    }
-
-    function renderTable() {
-      const tbody = document.getElementById('os-list');
-      
-      const filtered = activeFilter === 'all' 
-        ? osDataList 
-        : osDataList.filter(os => os.status === activeFilter);
-
-      if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 60px 20px; color: var(--muted);"><img src="marca/variacoes/duvida.svg" width="80" style="margin-bottom:10px;"><br>Nenhuma OS encontrada.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = filtered.map(os => `
-        <tr>
-          <td><strong style="color:var(--text);">${escapeHTML(os.protocol)}</strong></td>
-          <td>
-            <b>${escapeHTML(os.client)}</b>
-            ${os.notes ? `<span style="display:block; font-size:11px; color:var(--muted); margin-top:4px; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📝 ${escapeHTML(os.notes)}</span>` : ''}
-          </td>
-          <td>${escapeHTML(os.device)}<br><small style="color:var(--muted)">${escapeHTML(os.model || '')}</small></td>
-          <td>
-            <span class="status-badge" style="background: ${statusColors[os.status] || '#999'}">
-              ${os.status}
-            </span>
-          </td>
-          <td style="color:var(--muted); font-size:12px;">
-            ${new Date(os.updatedAt).toLocaleDateString('pt-BR')}
-          </td>
-          <td>
-            <button class="primary" onclick="window.openEdit('${os.id}')" style="min-height: auto; padding: 10px 16px; font-size:13px; border-radius:10px;">Gerenciar</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    // Modal
-    const modal = document.getElementById('edit-modal');
-    
-    window.openEdit = (id) => {
-      currentOS = osDataList.find(o => o.id === id);
-      if (!currentOS) return;
-      
-      document.getElementById('modal-protocol').textContent = escapeHTML(currentOS.protocol);
-      document.getElementById('modal-client').textContent = escapeHTML(currentOS.client);
-      document.getElementById('modal-phone').textContent = escapeHTML(currentOS.phone || 'Não informado');
-      document.getElementById('modal-device').textContent = escapeHTML(`${currentOS.device} ${currentOS.model ? '('+currentOS.model+')' : ''}`);
-      document.getElementById('modal-problem').textContent = escapeHTML(currentOS.problem);
-      
-      document.getElementById('os-status').value = currentOS.status;
-      document.getElementById('os-budget').value = currentOS.budget || '';
-      document.getElementById('os-notes').value = '';
-      
-      const historyDiv = document.getElementById('modal-history');
-      if (currentOS.history && currentOS.history.length > 0) {
-        historyDiv.innerHTML = currentOS.history.map(h => `
-          <div class="history-item">
-            <span style="font-weight: 600;">${escapeHTML(h.action)}</span> - <span style="color:var(--muted)">${new Date(h.date).toLocaleString('pt-BR')}</span><br>
-            <span style="color: var(--muted);">${escapeHTML(h.note)}</span>
-          </div>
-        `).reverse().join('');
-      } else {
-        historyDiv.innerHTML = '<span style="color:var(--muted)">Nenhum histórico registrado.</span>';
-      }
-      
-      modal.classList.remove('hidden');
-    };
-    
-    document.getElementById('modal-whatsapp-btn').addEventListener('click', () => {
-      if (!currentOS || !currentOS.phone) {
-        alert("Cliente não possui telefone cadastrado.");
-        return;
-      }
-      const msg = `Olá ${currentOS.client}!\n\nAqui é da MA PRIME TEC.\nTemos uma atualização sobre a sua Ordem de Serviço (Protocolo: *${currentOS.protocol}*).\n\nEquipamento: ${currentOS.device}\n*Status atual: ${currentOS.status}*\n\nSe precisar de algo, estamos à disposição!`;
-      const phoneOnlyNumbers = currentOS.phone.replace(/\D/g, '');
-      const fullPhone = phoneOnlyNumbers.length === 11 ? '55' + phoneOnlyNumbers : phoneOnlyNumbers;
-      window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-    });
-
-    const closeModal = () => modal.classList.add('hidden');
-    document.getElementById('close-modal').addEventListener('click', closeModal);
-    document.getElementById('close-modal-x').addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-    });
-
-    document.getElementById('edit-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const newStatus = document.getElementById('os-status').value;
-      const newBudget = document.getElementById('os-budget').value;
-      const newNotes = document.getElementById('os-notes').value;
-      const newUpdatedAt = new Date().toISOString();
-      
-      let newHistory = currentOS.history ? [...currentOS.history] : [];
-      let historyNote = '';
-      if (newStatus !== currentOS.status) {
-        historyNote += `Status alterado de "${currentOS.status}" para "${newStatus}". `;
-      }
-      if (newBudget && newBudget !== currentOS.budget) {
-        historyNote += `Orçamento atualizado para R$ ${newBudget}. `;
-      }
-      if (newNotes.trim()) {
-        historyNote += `Nota adicionada: ${newNotes}`;
-      }
-      
-      if (historyNote) {
-        newHistory.push({
-          date: newUpdatedAt,
-          action: 'Atualização',
-          note: historyNote
-        });
-      }
-      
-      try {
-        const osRef = doc(db, "os_list", currentOS.id);
-        await updateDoc(osRef, {
-          status: newStatus,
-          budget: newBudget,
-          updatedAt: newUpdatedAt,
-          history: newHistory
-        });
-        closeModal();
-      } catch (error) {
-        console.error("Error updating OS:", error);
-        alert("Erro ao atualizar a OS.");
-      }
-    });
-
-    // New OS Modal Logic
-    const newOsModal = document.getElementById('new-os-modal');
-    const closeNewOs = () => newOsModal.classList.add('hidden');
-    
-    document.getElementById('btn-new-os').addEventListener('click', () => {
-      document.getElementById('new-os-form').reset();
-      newOsModal.classList.remove('hidden');
-    });
-    
-    document.getElementById('close-new-os').addEventListener('click', closeNewOs);
-    document.getElementById('close-new-os-x').addEventListener('click', closeNewOs);
-    newOsModal.addEventListener('click', (e) => {
-      if (e.target === newOsModal) closeNewOs();
-    });
-
-    // New Client Modal Logic
-    const newClientModal = document.getElementById('new-client-modal');
-    const closeNewClient = () => newClientModal.classList.add('hidden');
-    
-    document.getElementById('btn-new-client').addEventListener('click', () => {
-      document.getElementById('new-client-form').reset();
-      newClientModal.classList.remove('hidden');
-    });
-    document.getElementById('btn-new-client-from-os').addEventListener('click', () => {
-      document.getElementById('new-client-form').reset();
-      newClientModal.classList.remove('hidden');
-    });
-    
-    document.getElementById('close-new-client').addEventListener('click', closeNewClient);
-    document.getElementById('close-new-client-x').addEventListener('click', closeNewClient);
-    newClientModal.addEventListener('click', (e) => {
-      if (e.target === newClientModal) closeNewClient();
-    });
-
-    document.getElementById('new-client-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const cpf = document.getElementById('new-cli-cpf').value.trim();
-      if (cpf.length < 11) {
-        alert("CPF / CNPJ inválido.");
-        return;
-      }
-      const clientData = {
-        name: document.getElementById('new-cli-name').value.trim(),
-        cpf: cpf,
-        phone: document.getElementById('new-cli-phone').value.trim(),
-        address: document.getElementById('new-cli-address').value.trim(),
-        email: document.getElementById('new-cli-email').value.trim(),
-        createdAt: new Date().toISOString()
-      };
-      
-      try {
-        const clientRef = doc(db, "clients", cpf); // Use CPF as ID
-        await setDoc(clientRef, clientData, { merge: true });
-        closeNewClient();
-        if(!document.getElementById('new-os-modal').classList.contains('hidden')) {
-           // pre select this client
-           setTimeout(() => {
-             document.getElementById('new-os-client-select').value = cpf;
-           }, 500);
-        }
-      } catch (err) {
-        console.error("Error creating Client:", err);
-        alert("Erro ao criar Cliente.");
-      }
-    });
-
-    document.getElementById('new-os-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const clientId = document.getElementById('new-os-client-select').value;
-      if (!clientId) {
-        alert("Selecione um cliente válido.");
-        return;
-      }
-      
-      const client = clientDataList.find(c => c.id === clientId);
-      if (!client) {
-        alert("Cliente não encontrado.");
-        return;
-      }
-      
-      const osData = {
-        protocol: 'OS-' + Math.floor(1000 + Math.random() * 9000),
-        client: client.name,
-        clientCpf: client.id, // Stores CPF here for the public area
-        phone: client.phone,
-        device: document.getElementById('new-device').value,
-        model: document.getElementById('new-model').value.trim(),
-        problem: document.getElementById('new-problem').value.trim(),
-        status: 'Aberto',
-        budget: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        history: [{
-          date: new Date().toISOString(),
-          action: 'Criação',
-          note: 'OS gerada pelo painel administrativo.'
-        }]
-      };
-
-      try {
-        await addDoc(collection(db, "os_list"), osData);
-        closeNewOs();
-      } catch (err) {
-        console.error("Error creating OS:", err);
-        alert("Erro ao criar OS.");
-      }
-    });
-  </script>
+  <script type="module" src="admin.js"></script>
 </body>
 </html>
