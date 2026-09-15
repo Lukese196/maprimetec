@@ -12,20 +12,47 @@ const problems = {
 let step = 0;
 const escapeHTML = value => String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
-function isValidCpf(cpf) {
-  cpf = cpf.replace(/\D/g, '');
-  if (cpf.length !== 11 || !!cpf.match(/(\d)\1{10}/)) return false;
-  let sum = 0, rest;
-  for (let i = 1; i <= 9; i++) sum = sum + parseInt(cpf.substring(i-1, i)) * (11 - i);
-  rest = (sum * 10) % 11;
-  if ((rest === 10) || (rest === 11)) rest = 0;
-  if (rest !== parseInt(cpf.substring(9, 10))) return false;
-  sum = 0;
-  for (let i = 1; i <= 10; i++) sum = sum + parseInt(cpf.substring(i-1, i)) * (12 - i);
-  rest = (sum * 10) % 11;
-  if ((rest === 10) || (rest === 11)) rest = 0;
-  return rest === parseInt(cpf.substring(10, 11));
-}
+  function isValidCpfCnpj(val) {
+    val = val.replace(/\D/g, '');
+    if (val.length === 11) {
+      if (!!val.match(/(\d)\1{10}/)) return false;
+      let sum = 0, rest;
+      for (let i = 1; i <= 9; i++) sum = sum + parseInt(val.substring(i-1, i)) * (11 - i);
+      rest = (sum * 10) % 11;
+      if ((rest === 10) || (rest === 11)) rest = 0;
+      if (rest !== parseInt(val.substring(9, 10))) return false;
+      sum = 0;
+      for (let i = 1; i <= 10; i++) sum = sum + parseInt(val.substring(i-1, i)) * (12 - i);
+      rest = (sum * 10) % 11;
+      if ((rest === 10) || (rest === 11)) rest = 0;
+      return rest === parseInt(val.substring(10, 11));
+    } else if (val.length === 14) {
+      if (!!val.match(/(\d)\1{13}/)) return false;
+      let length = val.length - 2;
+      let numbers = val.substring(0, length);
+      let digits = val.substring(length);
+      let sum = 0;
+      let pos = length - 7;
+      for (let i = length; i >= 1; i--) {
+        sum += numbers.charAt(length - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      let result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+      if (result != digits.charAt(0)) return false;
+      length = length + 1;
+      numbers = val.substring(0, length);
+      sum = 0;
+      pos = length - 7;
+      for (let i = length; i >= 1; i--) {
+        sum += numbers.charAt(length - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+      if (result != digits.charAt(1)) return false;
+      return true;
+    }
+    return false;
+  }
 
 function formatDate(v, fallback = '—') {
   if (!v) return fallback;
@@ -354,8 +381,8 @@ function render() {
             document.querySelector('#name').reportValidity(); 
             return; 
           }
-          if (!isValidCpf(state.cpf)) {
-            document.querySelector('#cpf').setCustomValidity('CPF inválido.');
+          if (!isValidCpfCnpj(state.cpf)) {
+            document.querySelector('#cpf').setCustomValidity('CPF ou CNPJ inválido.');
             document.querySelector('#cpf').reportValidity();
             return;
           }
@@ -380,10 +407,18 @@ function render() {
       }
       if (input.name === 'cpf') {
         let v = input.value.replace(/\D/g, '');
-        if (v.length > 11) v = v.slice(0, 11);
-        if (v.length > 3) v = `${v.slice(0,3)}.${v.slice(3)}`;
-        if (v.length > 7) v = `${v.slice(0,7)}.${v.slice(7)}`;
-        if (v.length > 11) v = `${v.slice(0,11)}-${v.slice(11)}`;
+        if (v.length > 14) v = v.slice(0, 14);
+        
+        if (v.length <= 11) {
+          if (v.length > 3) v = `${v.slice(0,3)}.${v.slice(3)}`;
+          if (v.length > 7) v = `${v.slice(0,7)}.${v.slice(7)}`;
+          if (v.length > 11) v = `${v.slice(0,11)}-${v.slice(11)}`;
+        } else {
+          if (v.length > 2) v = `${v.slice(0,2)}.${v.slice(2)}`;
+          if (v.length > 6) v = `${v.slice(0,6)}.${v.slice(6)}`;
+          if (v.length > 10) v = `${v.slice(0,10)}/${v.slice(10)}`;
+          if (v.length > 15) v = `${v.slice(0,15)}-${v.slice(15)}`;
+        }
         input.value = v;
       }
       state[input.name] = input.value; 
